@@ -122,8 +122,13 @@ input:focus-visible + .switch__track {
   border-radius: 0;
   width: 32px;
   height: 32px;
-  font-size: 14px;
-  line-height: 1;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#theme svg {
+  display: block;
 }
 #theme:hover {
   border-color: var(--accent);
