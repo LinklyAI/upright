@@ -650,8 +650,14 @@ input:focus-visible + .switch__track {
   .brand__tagline {
     display: none;
   }
+  /* Single column: the left column's children become grid items so the FAQ can sink to the end. */
   .stage-column {
     position: static;
+    display: contents;
+  }
+  .faq {
+    order: 10;
+    margin-top: 0;
   }
   .gauges {
     grid-template-columns: 1fr;
