@@ -1,0 +1,21 @@
+{
+  "name": "posture-guard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "copy-wasm": "node scripts/copy-wasm.mjs",
+    "dev": "pnpm run copy-wasm && vite",
+    "build": "pnpm run copy-wasm && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}

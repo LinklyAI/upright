@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Posture Guard</title>
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__header">
+        <h1>Posture Guard</h1>
+        <p>纯浏览器本地检测坐姿：离屏太近 / 低头前倾 / 驼背塌陷。画面不会离开你的电脑。</p>
+      </header>
+
+      <section class="stage">
+        <video id="video" playsinline muted></video>
+        <canvas id="overlay"></canvas>
+      </section>
+
+      <section id="panel" class="panel">
+        <div id="status" class="panel__status">未启动</div>
+        <div id="issues" class="panel__issues"></div>
+        <table class="panel__metrics">
+          <thead>
+            <tr><th>指标</th><th>当前</th><th>基线</th><th>偏差</th></tr>
+          </thead>
+          <tbody id="metrics"></tbody>
+        </table>
+        <div id="fps" class="panel__fps"></div>
+      </section>
+
+      <section class="controls">
+        <button id="start" type="button">启动摄像头</button>
+        <button id="calibrate" type="button" disabled>校准（端正坐好 3 秒）</button>
+        <button id="pip" type="button" disabled>置顶小窗</button>
+        <label class="controls__toggle"><input id="sound" type="checkbox" checked /> 声音提醒</label>
+      </section>
+
+      <section id="log" class="log"></section>
+    </main>
+
+    <div id="alarm-overlay" class="alarm-overlay"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
