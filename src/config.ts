@@ -3,9 +3,15 @@ import type { Issue, IssueRule, Sensitivity } from './types';
 /** Served from public/wasm, copied from node_modules by scripts/copy-wasm.mjs. */
 export const WASM_PATH = '/wasm';
 
+/**
+ * Self-hosted copies of MediaPipe's float16 models (public/models), so the page works where
+ * storage.googleapis.com is unreachable. Upstream:
+ * https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
+ * https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
+ */
 export const MODEL_URLS = {
-  face: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-  pose: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+  face: '/models/face_landmarker.task',
+  pose: '/models/pose_landmarker_lite.task',
 } as const;
 
 /** Detection cadence in the foreground. Hidden tabs are throttled to ~1 Hz by Chrome, which is still enough. */
