@@ -1,7 +1,9 @@
 import {
   BLINK_CLOSE_THRESHOLD,
   BLINK_OPEN_THRESHOLD,
-  BLINK_SEVERITY,
+  LOOK_AWAY_BREAK_MS,
+  LOOK_AWAY_INTERVAL_MIN,
+  NUDGE_SEVERITY,
   SENSITIVITY_PRESETS,
   SEVERITY_RAMP_MS,
   SIDE_LEAN_LATERAL,
@@ -26,6 +28,7 @@ const ISSUES: readonly Issue[] = [
   'sideLean',
   'blink',
   'sitting',
+  'lookAway',
 ];
 
 /**
@@ -90,6 +93,39 @@ class IssueTracker {
   }
 }
 
+/**
+ * 20-20-20 timer: minutes of continuous screen time. Resets after the user has been out of
+ * frame for the break length, or once the reminder has been showing for that long (the user
+ * looked away but stayed in frame).
+ */
+class LookAwayTimer {
+  private screenSince: number | null = null;
+  private awaySince: number | null = null;
+  private remindSince: number | null = null;
+
+  update(present: boolean, now: number): number | null {
+    if (!present) {
+      this.awaySince ??= now;
+      if (now - this.awaySince >= LOOK_AWAY_BREAK_MS) this.screenSince = null;
+      return null;
+    }
+    this.awaySince = null;
+    this.screenSince ??= now;
+    const minutes = (now - this.screenSince) / 60000;
+    if (minutes >= LOOK_AWAY_INTERVAL_MIN) {
+      this.remindSince ??= now;
+      if (now - this.remindSince >= LOOK_AWAY_BREAK_MS) {
+        this.screenSince = now;
+        this.remindSince = null;
+        return 0;
+      }
+    } else {
+      this.remindSince = null;
+    }
+    return minutes;
+  }
+}
+
 /** Tracks how long the user has been continuously in frame; short gaps do not reset it. */
 class SeatedTimer {
   private seatedSince: number | null = null;
@@ -138,6 +174,7 @@ export class PostureJudge {
   private readonly trackers: Record<Issue, IssueTracker>;
   private readonly seated = new SeatedTimer();
   private readonly blink = new BlinkTimer();
+  private readonly lookAway = new LookAwayTimer();
   private sensitivity: Sensitivity = 'normal';
   private muted: ReadonlySet<Issue> = new Set();
 
@@ -175,9 +212,9 @@ export class PostureJudge {
     for (const issue of ISSUES) {
       const state = issues[issue];
       if (!state.active || state.activeSince === null) continue;
-      // A blink reminder is a nudge, not a posture fault: it never drives the page deep red.
-      if (issue === 'blink') {
-        severity = Math.max(severity, BLINK_SEVERITY);
+      // Reminders are nudges, not posture faults: they never drive the page deep red.
+      if (issue === 'blink' || issue === 'lookAway') {
+        severity = Math.max(severity, NUDGE_SEVERITY);
         continue;
       }
       const ramp = Math.min(1, (now - state.activeSince) / SEVERITY_RAMP_MS);
@@ -190,6 +227,7 @@ export class PostureJudge {
   /** Signed deviations from baseline; positive means "worse". See config.ts for units. */
   private deviations(metrics: FrameMetrics | null, now: number): Record<Issue, number | null> {
     const sitting = this.seated.update(metrics !== null, now);
+    const lookAway = this.lookAway.update(metrics !== null, now);
     const blink = this.blink.update(metrics?.eyeClosed ?? null, now);
     if (!metrics) {
       return {
@@ -202,6 +240,7 @@ export class PostureJudge {
         sideLean: null,
         blink,
         sitting,
+        lookAway,
       };
     }
     const b = this.baseline;
@@ -245,6 +284,7 @@ export class PostureJudge {
       sideLean,
       blink,
       sitting,
+      lookAway,
     };
   }
 }

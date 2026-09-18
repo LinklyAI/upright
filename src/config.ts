@@ -45,9 +45,14 @@ export const SITTING_ABSENCE_RESET_MS = 120000;
 /** Blink detection: eye-closure blendshape hysteresis, and how red a blink reminder may tint the page. */
 export const BLINK_CLOSE_THRESHOLD = 0.5;
 export const BLINK_OPEN_THRESHOLD = 0.3;
-export const BLINK_SEVERITY = 0.2;
+/** Reminders (blink, look away) are nudges: the page never goes deep red for them. */
+export const NUDGE_SEVERITY = 0.2;
 /** Blink detection needs several frames per second; below this it is suspended. */
 export const BLINK_MIN_FPS = 4;
+
+/** 20-20-20 rule: after this long looking at the screen, look 6 m away for LOOK_AWAY_BREAK_MS. */
+export const LOOK_AWAY_INTERVAL_MIN = 20;
+export const LOOK_AWAY_BREAK_MS = 20000;
 
 /**
  * Deviation units:
@@ -60,6 +65,7 @@ export const BLINK_MIN_FPS = 4;
  * - sideLean:    normalized score, 1 = component threshold reached
  * - blink:       seconds since the last blink
  * - sitting:     minutes seated without a break
+ * - lookAway:    minutes looking at the screen since the last break
  */
 export const RULES: Record<Issue, IssueRule> = {
   tooClose: { enter: 0.12, exit: 0.06, enterMs: 3000, exitMs: 1500 },
@@ -80,12 +86,13 @@ export const RULES: Record<Issue, IssueRule> = {
     enterMs: 0,
     exitMs: SITTING_ABSENCE_RESET_MS,
   },
+  lookAway: { enter: LOOK_AWAY_INTERVAL_MIN, exit: LOOK_AWAY_INTERVAL_MIN, enterMs: 0, exitMs: 300 },
 };
 
 /** Issues whose thresholds are not affected by the sensitivity setting. */
-export const UNSCALED_ISSUES: ReadonlySet<Issue> = new Set<Issue>(['blink', 'sitting']);
+export const UNSCALED_ISSUES: ReadonlySet<Issue> = new Set<Issue>(['blink', 'sitting', 'lookAway']);
 /** Issues whose value is already a timer and must not be EMA-smoothed. */
-export const UNSMOOTHED_ISSUES: ReadonlySet<Issue> = new Set<Issue>(['blink', 'sitting']);
+export const UNSMOOTHED_ISSUES: ReadonlySet<Issue> = new Set<Issue>(['blink', 'sitting', 'lookAway']);
 
 export interface SensitivityPreset {
   /** Multiplied into enter/exit thresholds. */

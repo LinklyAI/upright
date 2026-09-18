@@ -1,6 +1,15 @@
 /** Posture problems the demo can flag. */
 export type Issue =
-  'tooClose' | 'headDown' | 'headTilt' | 'headForward' | 'slouch' | 'shrug' | 'sideLean' | 'blink' | 'sitting';
+  | 'tooClose'
+  | 'headDown'
+  | 'headTilt'
+  | 'headForward'
+  | 'slouch'
+  | 'shrug'
+  | 'sideLean'
+  | 'blink'
+  | 'sitting'
+  | 'lookAway';
 
 /** Hysteresis + dwell-time rule for one issue. Deviation units differ per issue (see config.ts). */
 export interface IssueRule {

@@ -55,6 +55,7 @@ const ISSUES: readonly Issue[] = [
   'sideLean',
   'blink',
   'sitting',
+  'lookAway',
 ];
 
 /** Checks the user switched off by clicking their gauge. */

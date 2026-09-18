@@ -18,6 +18,8 @@ export interface Elements {
   sensitivity: HTMLFieldSetElement;
   sound: HTMLInputElement;
   eyeCare: HTMLInputElement;
+  sittingReminder: HTMLInputElement;
+  lookAwayReminder: HTMLInputElement;
   theme: HTMLButtonElement;
   language: HTMLSelectElement;
   log: HTMLElement;
@@ -48,6 +50,8 @@ export function getElements(): Elements {
     sensitivity: byId('sensitivity'),
     sound: byId('sound'),
     eyeCare: byId('eye-care'),
+    sittingReminder: byId('sitting-reminder'),
+    lookAwayReminder: byId('look-away-reminder'),
     theme: byId('theme'),
     language: byId('language'),
     log: byId('log'),
@@ -88,6 +92,7 @@ const ISSUE_ORDER: Issue[] = [
   'sideLean',
   'blink',
   'sitting',
+  'lookAway',
 ];
 
 type Unit = '%' | '°' | '×' | 's' | 'min';
@@ -102,6 +107,7 @@ const ISSUE_LABEL_KEYS: Record<Issue, Key> = {
   sideLean: 'issueSideLean',
   blink: 'issueBlink',
   sitting: 'issueSitting',
+  lookAway: 'issueLookAway',
 };
 
 const ISSUE_UNITS: Record<Issue, Unit> = {
@@ -114,6 +120,7 @@ const ISSUE_UNITS: Record<Issue, Unit> = {
   sideLean: '×',
   blink: 's',
   sitting: 'min',
+  lookAway: 'min',
 };
 
 interface GaugeRefs {
@@ -213,7 +220,13 @@ export function issueLabel(issue: Issue): string {
 
 export function describeVerdict(verdict: Verdict): string {
   const active = ISSUE_ORDER.filter((issue) => verdict.issues[issue].active).map((issue) =>
-    issue === 'sitting' ? t('sittingMessage') : issue === 'blink' ? t('blinkMessage') : t(ISSUE_LABEL_KEYS[issue]),
+    issue === 'sitting'
+      ? t('sittingMessage')
+      : issue === 'blink'
+        ? t('blinkMessage')
+        : issue === 'lookAway'
+          ? t('lookAwayMessage')
+          : t(ISSUE_LABEL_KEYS[issue]),
   );
   return active.join(getLocale() === 'zh' ? '、' : ', ');
 }
@@ -232,6 +245,7 @@ const METRIC_ROW_KEYS: Key[] = [
   'metricLateral',
   'metricBlink',
   'metricSeated',
+  'metricScreenTime',
 ];
 
 export function buildMetricsTable(tbody: HTMLElement): void {
@@ -269,6 +283,7 @@ export function renderMetrics(
     [fmt(s?.lateral, 2, 6), fmt(bs?.lateral, 2, 6), '—'],
     [fmt(metrics?.eyeClosed, 2, 6), '—', formatDeviation(v?.blink, 's')],
     [formatDeviation(v?.sitting, 'min'), '—', '—'],
+    [formatDeviation(v?.lookAway, 'min'), '—', '—'],
   ];
   const rows = tbody.querySelectorAll('tr');
   values.forEach((cells, rowIndex) => {

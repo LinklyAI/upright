@@ -83,6 +83,8 @@ function setMuted(issue: Issue, isMuted: boolean): void {
   judge?.setMuted(muted);
   renderGauges(els.issues, null, muted);
   if (issue === 'blink') els.eyeCare.checked = !isMuted;
+  if (issue === 'sitting') els.sittingReminder.checked = !isMuted;
+  if (issue === 'lookAway') els.lookAwayReminder.checked = !isMuted;
   appendLog(els.log, t(isMuted ? 'checkMutedLog' : 'checkUnmutedLog', { name: issueLabel(issue) }));
 }
 
@@ -97,6 +99,8 @@ writeSensitivity(els.sensitivity, sensitivity);
 els.sound.checked = loadSoundEnabled();
 alerter.soundEnabled = els.sound.checked;
 els.eyeCare.checked = !muted.has('blink');
+els.sittingReminder.checked = !muted.has('sitting');
+els.lookAwayReminder.checked = !muted.has('lookAway');
 if (baseline) judge = createJudge(baseline);
 
 function createJudge(base: Baseline): PostureJudge {
@@ -301,6 +305,14 @@ els.sound.addEventListener('change', () => {
 
 els.eyeCare.addEventListener('change', () => {
   setMuted('blink', !els.eyeCare.checked);
+});
+
+els.sittingReminder.addEventListener('change', () => {
+  setMuted('sitting', !els.sittingReminder.checked);
+});
+
+els.lookAwayReminder.addEventListener('change', () => {
+  setMuted('lookAway', !els.lookAwayReminder.checked);
 });
 
 document.addEventListener('visibilitychange', () => {
