@@ -3,53 +3,119 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
     <title>Posture Guard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    />
   </head>
   <body>
     <main class="app">
-      <header class="app__header">
-        <h1>Posture Guard</h1>
-        <p>纯浏览器本地检测坐姿：太近 / 低头 / 歪头 / 头前伸 / 驼背 / 歪坐 / 久坐。画面不会离开你的电脑。</p>
+      <header class="masthead">
+        <div class="masthead__brand">
+          <span class="masthead__mark" aria-hidden="true"></span>
+          <h1>Posture Guard</h1>
+        </div>
+        <p class="masthead__tagline">
+          本地摄像头坐姿监测。画面只在这台电脑上处理，不上传。
+        </p>
       </header>
 
-      <section class="stage">
+      <section class="stage" aria-label="摄像头画面">
         <video id="video" playsinline muted></video>
         <canvas id="overlay"></canvas>
+        <div id="stage-hint" class="stage__hint">点「启动摄像头」开始</div>
       </section>
 
       <div class="side">
-        <section class="controls">
-          <button id="start" type="button">启动摄像头</button>
-          <button id="calibrate" type="button" disabled>校准（端正坐好 3 秒）</button>
-          <button id="pip" type="button" disabled>置顶小窗</button>
-          <label class="controls__field">
-            灵敏度
-            <select id="sensitivity">
-              <option value="low">低</option>
-              <option value="normal">中</option>
-              <option value="high">高</option>
-            </select>
-          </label>
-          <label class="controls__field"><input id="sound" type="checkbox" checked /> 声音提醒</label>
-        </section>
-
         <section id="panel" class="panel">
-          <div id="status" class="panel__status">未启动</div>
-          <div id="issues" class="panel__issues"></div>
-          <table class="panel__metrics">
-            <thead>
-              <tr><th>指标</th><th>当前</th><th>基线</th><th>偏差</th></tr>
-            </thead>
-            <tbody id="metrics"></tbody>
-          </table>
-          <div id="fps" class="panel__fps"></div>
+          <div class="verdict">
+            <span
+              id="verdict-dot"
+              class="verdict__dot verdict__dot--idle"
+              aria-hidden="true"
+            ></span>
+            <div class="verdict__text">
+              <div id="status" class="verdict__title">未启动</div>
+              <div id="fps" class="verdict__meta">等待摄像头</div>
+            </div>
+          </div>
+          <div id="issues" class="gauges" aria-label="各项检测"></div>
         </section>
 
-        <section id="log" class="log"></section>
+        <section class="toolbar" aria-label="控制">
+          <div class="toolbar__row">
+            <button id="start" type="button" class="btn btn--primary">
+              启动摄像头
+            </button>
+            <button id="calibrate" type="button" class="btn" disabled>
+              校准 · 端正坐好 3 秒
+            </button>
+            <button id="pip" type="button" class="btn" disabled>
+              置顶小窗
+            </button>
+          </div>
+          <div class="toolbar__row toolbar__row--settings">
+            <fieldset class="segmented" id="sensitivity">
+              <legend class="label">灵敏度</legend>
+              <label
+                ><input type="radio" name="sensitivity" value="low" /><span
+                  >低</span
+                ></label
+              >
+              <label
+                ><input type="radio" name="sensitivity" value="normal" /><span
+                  >中</span
+                ></label
+              >
+              <label
+                ><input type="radio" name="sensitivity" value="high" /><span
+                  >高</span
+                ></label
+              >
+            </fieldset>
+            <label class="switch">
+              <input id="sound" type="checkbox" checked />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span>声音提醒</span>
+            </label>
+          </div>
+        </section>
+
+        <details class="details" open>
+          <summary class="label">原始指标</summary>
+          <div class="table-wrap">
+            <table class="metrics">
+              <colgroup>
+                <col />
+                <col />
+                <col />
+                <col />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>指标</th>
+                  <th>当前</th>
+                  <th>基线</th>
+                  <th>偏差</th>
+                </tr>
+              </thead>
+              <tbody id="metrics"></tbody>
+            </table>
+          </div>
+        </details>
+
+        <section class="events" aria-label="事件记录">
+          <div class="label">事件</div>
+          <pre id="log" class="events__log"></pre>
+        </section>
       </div>
     </main>
 
-    <div id="alarm-overlay" class="alarm-overlay"></div>
+    <div id="alarm-overlay" class="alarm-overlay" aria-hidden="true"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

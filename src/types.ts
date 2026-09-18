@@ -71,6 +71,8 @@ export interface Baseline {
 export interface IssueState {
   /** Smoothed deviation from baseline; null when the signal is unavailable. */
   value: number | null;
+  /** Effective enter threshold after the sensitivity preset; lets the UI show value/threshold. */
+  threshold: number;
   active: boolean;
   activeSince: number | null;
 }

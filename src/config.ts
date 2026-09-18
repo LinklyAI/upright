@@ -12,7 +12,7 @@ export const MODEL_URLS = {
 export const TICK_MS = 120;
 
 /** EMA time constant for smoothing deviations. */
-export const SMOOTHING_TAU_MS = 400;
+export const SMOOTHING_TAU_MS = 600;
 
 /** Calibration window: user sits upright while we collect samples. */
 export const CALIBRATION_MS = 3000;
@@ -31,10 +31,10 @@ export const NOTIFY_INTERVAL_MS = 30000;
 export const HEAD_PITCH_SIGN = 1;
 
 /** Component thresholds folded into the composite (normalized) slouch and sideLean scores. */
-export const SLOUCH_TORSO_DROP = 0.15;
-export const SLOUCH_NOSE_DROP = 0.35;
-export const SIDE_LEAN_TILT_DEG = 8;
-export const SIDE_LEAN_LATERAL = 0.15;
+export const SLOUCH_TORSO_DROP = 0.18;
+export const SLOUCH_NOSE_DROP = 0.4;
+export const SIDE_LEAN_TILT_DEG = 10;
+export const SIDE_LEAN_LATERAL = 0.2;
 
 /** Continuous sitting reminder. */
 export const SITTING_LIMIT_MIN = 45;
@@ -53,9 +53,9 @@ export const SITTING_ABSENCE_RESET_MS = 120000;
  */
 export const RULES: Record<Issue, IssueRule> = {
   tooClose: { enter: 0.12, exit: 0.06, enterMs: 3000, exitMs: 1500 },
-  headDown: { enter: 10, exit: 5, enterMs: 3000, exitMs: 1500 },
-  headTilt: { enter: 10, exit: 5, enterMs: 3000, exitMs: 1500 },
-  headForward: { enter: 0.12, exit: 0.06, enterMs: 3000, exitMs: 1500 },
+  headDown: { enter: 12, exit: 6, enterMs: 3000, exitMs: 1500 },
+  headTilt: { enter: 12, exit: 6, enterMs: 3000, exitMs: 1500 },
+  headForward: { enter: 0.18, exit: 0.09, enterMs: 3000, exitMs: 1500 },
   slouch: { enter: 1, exit: 0.5, enterMs: 3000, exitMs: 1500 },
   sideLean: { enter: 1, exit: 0.5, enterMs: 3000, exitMs: 1500 },
   sitting: { enter: SITTING_LIMIT_MIN, exit: SITTING_LIMIT_MIN, enterMs: 0, exitMs: SITTING_ABSENCE_RESET_MS },

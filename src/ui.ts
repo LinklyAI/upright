@@ -1,10 +1,12 @@
 import { ISSUE_LABELS } from './config';
-import type { Baseline, FrameMetrics, Issue, IssueState, Verdict } from './types';
+import type { Baseline, FrameMetrics, Issue, IssueState, Sensitivity, Verdict } from './types';
 
 export interface Elements {
   video: HTMLVideoElement;
   canvas: HTMLCanvasElement;
+  stageHint: HTMLElement;
   panel: HTMLElement;
+  verdictDot: HTMLElement;
   status: HTMLElement;
   issues: HTMLElement;
   metrics: HTMLElement;
@@ -12,7 +14,7 @@ export interface Elements {
   start: HTMLButtonElement;
   calibrate: HTMLButtonElement;
   pip: HTMLButtonElement;
-  sensitivity: HTMLSelectElement;
+  sensitivity: HTMLFieldSetElement;
   sound: HTMLInputElement;
   log: HTMLElement;
   alarmOverlay: HTMLElement;
@@ -28,7 +30,9 @@ export function getElements(): Elements {
   return {
     video: byId('video'),
     canvas: byId('overlay'),
+    stageHint: byId('stage-hint'),
     panel: byId('panel'),
+    verdictDot: byId('verdict-dot'),
     status: byId('status'),
     issues: byId('issues'),
     metrics: byId('metrics'),
@@ -43,7 +47,123 @@ export function getElements(): Elements {
   };
 }
 
+export type VerdictTone = 'idle' | 'busy' | 'ok' | 'bad';
+
+export function setVerdict(els: Elements, tone: VerdictTone, title: string): void {
+  els.status.textContent = title;
+  els.verdictDot.className = `verdict__dot verdict__dot--${tone}`;
+}
+
+// ---------- sensitivity (segmented radios) ----------
+
+const SENSITIVITIES: readonly Sensitivity[] = ['low', 'normal', 'high'];
+
+export function readSensitivity(fieldset: HTMLFieldSetElement): Sensitivity | null {
+  const checked = fieldset.querySelector<HTMLInputElement>('input:checked');
+  return SENSITIVITIES.find((s) => s === checked?.value) ?? null;
+}
+
+export function writeSensitivity(fieldset: HTMLFieldSetElement, value: Sensitivity): void {
+  const input = fieldset.querySelector<HTMLInputElement>(`input[value="${value}"]`);
+  if (input) input.checked = true;
+}
+
+// ---------- gauges: one per issue, built once, updated in place ----------
+
 const ISSUE_ORDER: Issue[] = ['tooClose', 'headDown', 'headTilt', 'headForward', 'slouch', 'sideLean', 'sitting'];
+
+type Unit = '%' | '°' | '×' | 'min';
+
+const ISSUE_UNITS: Record<Issue, Unit> = {
+  tooClose: '%',
+  headDown: '°',
+  headTilt: '°',
+  headForward: '%',
+  slouch: '×',
+  sideLean: '×',
+  sitting: 'min',
+};
+
+interface GaugeRefs {
+  root: HTMLElement;
+  value: HTMLElement;
+  fill: HTMLElement;
+}
+
+/** Fixed-width number formatting so values change without the layout shifting. */
+const fmt = (value: number | null | undefined, digits: number, width = 0): string => {
+  const text = value === null || value === undefined || Number.isNaN(value) ? '—' : value.toFixed(digits);
+  return text.padStart(width, ' ');
+};
+
+function formatDeviation(state: IssueState | undefined, unit: Unit): string {
+  if (!state || state.value === null) return '—';
+  const v = state.value;
+  switch (unit) {
+    case '%':
+      return `${fmt(v * 100, 0, 4)}%`;
+    case '°':
+      return `${fmt(v, 1, 5)}°`;
+    case '×':
+      return `${fmt(v, 2, 5)}×`;
+    case 'min':
+      return `${fmt(v, 0, 3)} min`;
+  }
+}
+
+/** Reading shown on the gauge: "deviation / threshold" so the user sees how far from firing it is. */
+function formatGauge(state: IssueState | undefined, unit: Unit): string {
+  if (!state || state.value === null) return '—';
+  const digits = unit === '%' ? 0 : unit === '°' ? 1 : unit === '×' ? 2 : 0;
+  const scale = unit === '%' ? 100 : 1;
+  const suffix = unit === 'min' ? ' min' : unit;
+  return `${fmt(Math.max(0, state.value) * scale, digits)} / ${fmt(state.threshold * scale, digits)}${suffix}`;
+}
+
+export function buildGauges(container: HTMLElement): void {
+  container.replaceChildren(
+    ...ISSUE_ORDER.map((issue) => {
+      const root = document.createElement('div');
+      root.className = 'gauge gauge--unknown';
+      root.dataset.issue = issue;
+      root.innerHTML =
+        '<div class="gauge__head"><span class="gauge__name"></span><span class="gauge__value">—</span></div>' +
+        '<div class="gauge__bar"><div class="gauge__fill"></div></div>';
+      const name = root.querySelector<HTMLElement>('.gauge__name');
+      if (name) name.textContent = ISSUE_LABELS[issue];
+      return root;
+    }),
+  );
+}
+
+function gaugeRefs(container: HTMLElement): GaugeRefs[] {
+  return Array.from(container.querySelectorAll<HTMLElement>('.gauge')).flatMap((root) => {
+    const value = root.querySelector<HTMLElement>('.gauge__value');
+    const fill = root.querySelector<HTMLElement>('.gauge__fill');
+    return value && fill ? [{ root, value, fill }] : [];
+  });
+}
+
+export function renderGauges(container: HTMLElement, verdict: Verdict | null): void {
+  for (const { root, value, fill } of gaugeRefs(container)) {
+    const issue = root.dataset.issue as Issue | undefined;
+    if (!issue) continue;
+    const state = verdict?.issues[issue];
+    const unit = ISSUE_UNITS[issue];
+    value.textContent = formatGauge(state, unit);
+
+    root.classList.remove('gauge--unknown', 'gauge--warn', 'gauge--active');
+    if (!state || state.value === null) {
+      root.classList.add('gauge--unknown');
+      fill.style.width = '0%';
+      continue;
+    }
+    const ratio = Math.max(0, Math.min(1, state.value / state.threshold));
+    fill.style.width = `${(ratio * 100).toFixed(1)}%`;
+    if (state.active) root.classList.add('gauge--active');
+    else if (ratio >= 0.6) root.classList.add('gauge--warn');
+  }
+}
 
 export function describeVerdict(verdict: Verdict): string {
   const active = ISSUE_ORDER.filter((issue) => verdict.issues[issue].active).map((issue) =>
@@ -52,62 +172,25 @@ export function describeVerdict(verdict: Verdict): string {
   return active.join('、');
 }
 
-export function renderIssues(el: HTMLElement, verdict: Verdict | null): void {
-  el.replaceChildren(
-    ...ISSUE_ORDER.map((issue) => {
-      const chip = document.createElement('span');
-      const state = verdict?.issues[issue];
-      chip.className = 'chip';
-      if (!state || state.value === null) chip.classList.add('chip--unknown');
-      else if (state.active) chip.classList.add('chip--active');
-      chip.textContent = ISSUE_LABELS[issue];
-      return chip;
-    }),
-  );
-}
+// ---------- raw metrics table: rows built once, cells updated in place ----------
 
-const fmt = (value: number | null | undefined, digits: number): string =>
-  value === null || value === undefined || Number.isNaN(value) ? '—' : value.toFixed(digits);
+const METRIC_ROWS = [
+  '瞳距 (px)',
+  '头部俯仰 (°)',
+  '头部侧倾 (°)',
+  '脸肩比',
+  '鼻肩高度比',
+  '鼻子高度 (px)',
+  '肩线倾斜 (°)',
+  '横向偏移',
+  '连续就座',
+] as const;
 
-/** Formats a tracker's smoothed deviation with the unit that issue uses. */
-function deviation(state: IssueState | undefined, unit: '%' | '°' | '×' | 'min'): string {
-  if (!state || state.value === null) return '—';
-  switch (unit) {
-    case '%':
-      return `${fmt(state.value * 100, 0)}%`;
-    case '°':
-      return `${fmt(state.value, 1)}°`;
-    case '×':
-      return `${fmt(state.value, 2)}×`;
-    case 'min':
-      return `${fmt(state.value, 0)} min`;
-  }
-}
-
-export function renderMetrics(
-  el: HTMLElement,
-  metrics: FrameMetrics | null,
-  baseline: Baseline | null,
-  verdict: Verdict | null,
-): void {
-  const s = metrics?.shoulders;
-  const bs = baseline?.shoulders;
-  const v = verdict?.issues;
-  const rows: Array<[string, string, string, string]> = [
-    ['瞳距 (px)', fmt(metrics?.ipd, 1), fmt(baseline?.ipd, 1), deviation(v?.tooClose, '%')],
-    ['头部俯仰 (°)', fmt(metrics?.pitch, 1), fmt(baseline?.pitch, 1), deviation(v?.headDown, '°')],
-    ['头部侧倾 (°)', fmt(metrics?.roll, 1), fmt(baseline?.roll, 1), deviation(v?.headTilt, '°')],
-    ['脸肩比', fmt(s?.headForward, 3), fmt(bs?.headForward, 3), deviation(v?.headForward, '%')],
-    ['鼻肩高度比', fmt(s?.torsoRatio, 2), fmt(bs?.torsoRatio, 2), deviation(v?.slouch, '×')],
-    ['鼻子高度 (px)', fmt(metrics?.noseY, 0), fmt(baseline?.noseY, 0), s ? '—' : deviation(v?.slouch, '×')],
-    ['肩线倾斜 (°)', fmt(s?.tilt, 1), fmt(bs?.tilt, 1), deviation(v?.sideLean, '×')],
-    ['横向偏移', fmt(s?.lateral, 2), fmt(bs?.lateral, 2), '—'],
-    ['连续就座', deviation(v?.sitting, 'min'), '—', '—'],
-  ];
-  el.replaceChildren(
-    ...rows.map(([name, current, base, dev]) => {
+export function buildMetricsTable(tbody: HTMLElement): void {
+  tbody.replaceChildren(
+    ...METRIC_ROWS.map((name) => {
       const tr = document.createElement('tr');
-      for (const text of [name, current, base, dev]) {
+      for (const text of [name, '—', '—', '—']) {
         const td = document.createElement('td');
         td.textContent = text;
         tr.append(td);
@@ -117,7 +200,38 @@ export function renderMetrics(
   );
 }
 
+export function renderMetrics(
+  tbody: HTMLElement,
+  metrics: FrameMetrics | null,
+  baseline: Baseline | null,
+  verdict: Verdict | null,
+): void {
+  const s = metrics?.shoulders;
+  const bs = baseline?.shoulders;
+  const v = verdict?.issues;
+  const values: Array<[string, string, string]> = [
+    [fmt(metrics?.ipd, 1, 6), fmt(baseline?.ipd, 1, 6), formatDeviation(v?.tooClose, '%')],
+    [fmt(metrics?.pitch, 1, 6), fmt(baseline?.pitch, 1, 6), formatDeviation(v?.headDown, '°')],
+    [fmt(metrics?.roll, 1, 6), fmt(baseline?.roll, 1, 6), formatDeviation(v?.headTilt, '°')],
+    [fmt(s?.headForward, 3, 6), fmt(bs?.headForward, 3, 6), formatDeviation(v?.headForward, '%')],
+    [fmt(s?.torsoRatio, 2, 6), fmt(bs?.torsoRatio, 2, 6), s ? formatDeviation(v?.slouch, '×') : '—'],
+    [fmt(metrics?.noseY, 0, 6), fmt(baseline?.noseY, 0, 6), s ? '—' : formatDeviation(v?.slouch, '×')],
+    [fmt(s?.tilt, 1, 6), fmt(bs?.tilt, 1, 6), formatDeviation(v?.sideLean, '×')],
+    [fmt(s?.lateral, 2, 6), fmt(bs?.lateral, 2, 6), '—'],
+    [formatDeviation(v?.sitting, 'min'), '—', '—'],
+  ];
+  const rows = tbody.querySelectorAll('tr');
+  values.forEach((cells, rowIndex) => {
+    const row = rows[rowIndex];
+    if (!row) return;
+    cells.forEach((text, i) => {
+      const td = row.cells[i + 1];
+      if (td && td.textContent !== text) td.textContent = text;
+    });
+  });
+}
+
 export function appendLog(el: HTMLElement, message: string): void {
-  const time = new Date().toLocaleTimeString();
+  const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
   el.textContent = `${time}  ${message}\n${el.textContent ?? ''}`.split('\n').slice(0, 80).join('\n');
 }

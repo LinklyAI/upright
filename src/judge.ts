@@ -58,7 +58,7 @@ class IssueTracker {
       }
     }
 
-    return { value: this.smoothed, active: this.active, activeSince: this.activeSince };
+    return { value: this.smoothed, threshold: this.rule.enter * scale, active: this.active, activeSince: this.activeSince };
   }
 
   private smooth(raw: number | null, now: number): number | null {

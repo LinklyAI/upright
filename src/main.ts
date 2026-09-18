@@ -9,7 +9,18 @@ import { computeMetrics } from './metrics';
 import { Overlay } from './overlay';
 import { isPipSupported, openPip } from './pip';
 import type { Baseline, Sensitivity, Verdict } from './types';
-import { appendLog, describeVerdict, getElements, renderIssues, renderMetrics } from './ui';
+import {
+  appendLog,
+  buildGauges,
+  buildMetricsTable,
+  describeVerdict,
+  getElements,
+  readSensitivity,
+  renderGauges,
+  renderMetrics,
+  setVerdict,
+  writeSensitivity,
+} from './ui';
 
 const els = getElements();
 const alerter = new Alerter(els.alarmOverlay);
@@ -25,12 +36,10 @@ let lastTimestamp = 0;
 let frameCount = 0;
 let fpsWindowStart = performance.now();
 
-els.sensitivity.value = sensitivity;
+buildGauges(els.issues);
+buildMetricsTable(els.metrics);
+writeSensitivity(els.sensitivity, sensitivity);
 if (baseline) judge = new PostureJudge(baseline, RULES, sensitivity);
-
-function setStatus(message: string): void {
-  els.status.textContent = message;
-}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -43,22 +52,23 @@ async function start(): Promise<void> {
     alerter.enableAudio();
     void alerter.requestNotificationPermission();
 
-    setStatus('正在打开摄像头…');
+    setVerdict(els, 'busy', '正在打开摄像头…');
     const stream = await openCamera();
     els.video.srcObject = stream;
     await els.video.play();
+    els.stageHint.hidden = true;
     overlay.resize(els.video.videoWidth, els.video.videoHeight);
 
-    landmarkers = await Landmarkers.load(setStatus);
+    landmarkers = await Landmarkers.load((message) => setVerdict(els, 'busy', message));
     appendLog(els.log, `模型已加载（${landmarkers.delegate}）`);
     await requestWakeLock();
 
     window.setInterval(tick, TICK_MS);
     els.calibrate.disabled = false;
     els.pip.disabled = !isPipSupported();
-    setStatus(judge ? '运行中（沿用上次校准，可重新校准）' : '运行中，请先校准');
+    setVerdict(els, judge ? 'ok' : 'busy', judge ? '运行中，沿用上次校准' : '运行中，请先校准');
   } catch (error) {
-    setStatus(`启动失败：${errorMessage(error)}`);
+    setVerdict(els, 'bad', `启动失败：${errorMessage(error)}`);
     els.start.disabled = false;
   }
 }
@@ -77,7 +87,7 @@ function tick(): void {
 
   if (calibrator) {
     calibrator.add(metrics);
-    setStatus(`校准中，请保持端正坐姿… ${Math.round(calibrator.progress(now) * 100)}%`);
+    setVerdict(els, 'busy', `校准中，请保持端正坐姿… ${Math.round(calibrator.progress(now) * 100)}%`);
     overlay.draw(metrics, null);
     if (calibrator.isDone(now)) finishCalibration(calibrator);
     return;
@@ -85,7 +95,7 @@ function tick(): void {
 
   const verdict: Verdict | null = judge ? judge.update(metrics, now) : null;
   overlay.draw(metrics, verdict);
-  renderIssues(els.issues, verdict);
+  renderGauges(els.issues, verdict);
   renderMetrics(els.metrics, metrics, baseline, verdict);
 
   if (!verdict) return;
@@ -96,15 +106,16 @@ function tick(): void {
     appendLog(els.log, verdict.alarm ? `⚠ 警报：${message}` : '✓ 姿势已恢复');
     lastVerdictAlarm = verdict.alarm;
   }
-  if (!metrics) setStatus('未检测到人脸');
-  else setStatus(verdict.alarm ? `请调整：${message}` : '坐姿正常');
+  if (!metrics) setVerdict(els, 'idle', '未检测到人脸');
+  else if (verdict.alarm) setVerdict(els, 'bad', `请调整：${message}`);
+  else setVerdict(els, 'ok', '坐姿正常');
 }
 
 function finishCalibration(current: Calibrator): void {
   calibrator = null;
   const result = current.finish();
   if (!result) {
-    setStatus('校准失败：没有稳定检测到人脸，请正对摄像头重试');
+    setVerdict(els, 'bad', '校准失败：没有稳定检测到人脸，请正对摄像头重试');
     appendLog(els.log, '校准失败');
     return;
   }
@@ -112,7 +123,7 @@ function finishCalibration(current: Calibrator): void {
   saveBaseline(result);
   judge = new PostureJudge(result, RULES, sensitivity);
   lastVerdictAlarm = false;
-  setStatus('校准完成');
+  setVerdict(els, 'ok', '校准完成');
   const shoulders = result.shoulders
     ? `鼻肩比 ${result.shoulders.torsoRatio.toFixed(2)}，肩线 ${result.shoulders.tilt.toFixed(1)}°`
     : '肩膀不在画面内（驼背改用鼻子高度，歪坐 / 头前伸不可用）';
@@ -126,7 +137,8 @@ function trackFps(now: number): void {
   frameCount += 1;
   if (now - fpsWindowStart >= 1000) {
     const fps = (frameCount * 1000) / (now - fpsWindowStart);
-    els.fps.textContent = `${fps.toFixed(1)} fps${document.hidden ? '（后台）' : ''}`;
+    const mode = document.hidden ? '后台' : landmarkers?.delegate ?? '';
+    els.fps.textContent = `${fps.toFixed(1).padStart(4, ' ')} fps · ${mode}`;
     frameCount = 0;
     fpsWindowStart = now;
   }
@@ -150,12 +162,12 @@ els.pip.addEventListener('click', () => {
 });
 
 els.sensitivity.addEventListener('change', () => {
-  const value = els.sensitivity.value;
-  if (value !== 'low' && value !== 'normal' && value !== 'high') return;
+  const value = readSensitivity(els.sensitivity);
+  if (!value) return;
   sensitivity = value;
   saveSensitivity(value);
   judge?.setSensitivity(value);
-  appendLog(els.log, `灵敏度切换为：${els.sensitivity.selectedOptions[0]?.textContent ?? value}`);
+  appendLog(els.log, `灵敏度：${{ low: '低', normal: '中', high: '高' }[value]}`);
 });
 
 els.sound.addEventListener('change', () => {
