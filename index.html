@@ -37,10 +37,6 @@
           >
         </div>
         <nav class="masthead__nav">
-          <span class="masthead__note" data-i18n="note">
-            Posture detection that runs in your browser. No data ever leaves
-            your device.
-          </span>
           <label class="language-control">
             <span class="sr-only" data-i18n="language">Language</span>
             <select
@@ -75,13 +71,18 @@
       </header>
 
       <div class="stage-column">
-      <section class="stage" data-i18n-aria="stageAria">
-        <video id="video" playsinline muted></video>
-        <canvas id="overlay"></canvas>
-        <div id="stage-hint" class="stage__hint" data-i18n="stageHint">
-          Click "Start camera" to begin
-        </div>
-      </section>
+        <section class="stage" data-i18n-aria="stageAria">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+          <div id="stage-hint" class="stage__hint" data-i18n="stageHint">
+            Click "Start camera" to begin
+          </div>
+        </section>
+        <p class="stage-note" data-i18n="note">
+          Posture detection that runs in your browser. No data ever leaves your
+          device.
+        </p>
+      </div>
 
       <div class="side">
         <section id="panel" class="panel">
