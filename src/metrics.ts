@@ -1,18 +1,12 @@
-import type { Matrix, NormalizedLandmark } from '@mediapipe/tasks-vision';
+import type { Classifications, Matrix, NormalizedLandmark } from '@mediapipe/tasks-vision';
 import { HEAD_PITCH_SIGN } from './config';
 import type { RawDetection } from './landmarkers';
 import type { FrameMetrics, Point, ShoulderMetrics } from './types';
 
 // Face Landmarker (478 points): 468-472 left iris, 473-477 right iris.
-const FACE = {
-  forehead: 10,
-  chin: 152,
-  noseTip: 1,
-  leftIris: 468,
-  rightIris: 473,
-} as const;
+const FACE = { forehead: 10, chin: 152, noseTip: 1, leftIris: 468, rightIris: 473 } as const;
 // Pose Landmarker (33 points).
-const POSE = { leftShoulder: 11, rightShoulder: 12 } as const;
+const POSE = { leftEar: 7, rightEar: 8, leftShoulder: 11, rightShoulder: 12 } as const;
 
 const MIN_VISIBILITY = 0.5;
 const RAD_TO_DEG = 180 / Math.PI;
@@ -25,8 +19,20 @@ function dist(a: Point, b: Point): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function angleDeg(from: Point, to: Point): number {
-  return Math.atan2(to.y - from.y, to.x - from.x) * RAD_TO_DEG;
+function mid(a: Point, b: Point): Point {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+/**
+ * Tilt of the line a→b in degrees, −90..90. Uses atan rather than atan2 so the result does not
+ * depend on which end is "left": a line near horizontal reads near 0 whichever way round the
+ * points come, instead of jumping between +180 and −180.
+ */
+function lineTiltDeg(a: Point, b: Point): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  if (dx === 0) return dy === 0 ? 0 : 90;
+  return Math.atan(dy / dx) * RAD_TO_DEG;
 }
 
 function isVisible(landmark: NormalizedLandmark): boolean {
@@ -54,16 +60,27 @@ function pitchFromMesh(forehead: NormalizedLandmark, chin: NormalizedLandmark, w
   return Math.atan2(dz, dy) * RAD_TO_DEG;
 }
 
+/** Mean of the two eye-blink blendshapes, or null when blendshapes were not produced. */
+function eyeClosure(blendshapes: Classifications | undefined): number | null {
+  if (!blendshapes) return null;
+  let sum = 0;
+  let count = 0;
+  for (const category of blendshapes.categories) {
+    if (category.categoryName === 'eyeBlinkLeft' || category.categoryName === 'eyeBlinkRight') {
+      sum += category.score;
+      count += 1;
+    }
+  }
+  return count === 0 ? null : sum / count;
+}
+
 function shoulderMetrics(
   raw: RawDetection,
   nose: Point,
   ipd: number,
   width: number,
   height: number,
-): {
-  metrics: ShoulderMetrics;
-  points: [Point, Point];
-} | null {
+): { metrics: ShoulderMetrics; shoulders: [Point, Point]; ears: [Point, Point] | null } | null {
   const pose = raw.pose.landmarks[0];
   if (!pose) return null;
   const left = pose[POSE.leftShoulder];
@@ -74,17 +91,29 @@ function shoulderMetrics(
   const rightPx = toPx(right, width, height);
   const shoulderWidth = dist(leftPx, rightPx);
   if (shoulderWidth <= 1) return null;
+  const shoulderMid = mid(leftPx, rightPx);
 
-  const mid = { x: (leftPx.x + rightPx.x) / 2, y: (leftPx.y + rightPx.y) / 2 };
+  const leftEar = pose[POSE.leftEar];
+  const rightEar = pose[POSE.rightEar];
+  const ears: [Point, Point] | null =
+    leftEar && rightEar && isVisible(leftEar) && isVisible(rightEar)
+      ? [toPx(leftEar, width, height), toPx(rightEar, width, height)]
+      : null;
+  const head = ears ? mid(ears[0], ears[1]) : nose;
+
   return {
     metrics: {
       width: shoulderWidth,
-      tilt: angleDeg(leftPx, rightPx),
-      torsoRatio: (mid.y - nose.y) / shoulderWidth,
-      lateral: (nose.x - mid.x) / shoulderWidth,
+      tilt: lineTiltDeg(leftPx, rightPx),
+      midY: shoulderMid.y,
+      torsoRatio: (shoulderMid.y - head.y) / shoulderWidth,
+      headY: head.y,
+      usesEars: ears !== null,
+      lateral: (nose.x - shoulderMid.x) / shoulderWidth,
       headForward: ipd / shoulderWidth,
     },
-    points: [leftPx, rightPx],
+    shoulders: [leftPx, rightPx],
+    ears,
   };
 }
 
@@ -118,16 +147,18 @@ export function computeMetrics(raw: RawDetection, width: number, height: number)
   return {
     ipd,
     pitch,
-    roll: angleDeg(leftIrisPx, rightIrisPx),
+    roll: lineTiltDeg(leftIrisPx, rightIrisPx),
     noseY: nosePx.y,
     faceHeight: dist(foreheadPx, chinPx),
+    eyeClosed: eyeClosure(raw.face.faceBlendshapes[0]),
     shoulders: shoulders?.metrics ?? null,
     points: {
       leftIris: leftIrisPx,
       rightIris: rightIrisPx,
       forehead: foreheadPx,
       chin: chinPx,
-      shoulders: shoulders?.points ?? null,
+      ears: shoulders?.ears ?? null,
+      shoulders: shoulders?.shoulders ?? null,
     },
   };
 }

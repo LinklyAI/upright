@@ -11,7 +11,6 @@ export class Alerter {
   private lastBeepAt = 0;
   private lastNotifyAt = 0;
   private wasAlarm = false;
-  private readonly baseTitle = document.title;
   soundEnabled = true;
 
   constructor(private readonly overlay: HTMLElement) {}
@@ -31,10 +30,17 @@ export class Alerter {
     }
   }
 
+  /** Clears any visible alarm, e.g. when monitoring is paused. */
+  reset(): void {
+    this.overlay.style.opacity = '0';
+    document.title = t('title');
+    this.wasAlarm = false;
+  }
+
   apply(verdict: Verdict, message: string, now: number): void {
     const { alarm, severity } = verdict;
     this.overlay.style.opacity = alarm ? String(0.15 + 0.55 * severity) : '0';
-    document.title = alarm ? `⚠ ${message} – ${this.baseTitle}` : this.baseTitle;
+    document.title = alarm ? `⚠ ${message} – ${t('title')}` : t('title');
 
     if (alarm) {
       if (this.soundEnabled && now - this.lastBeepAt >= BEEP_INTERVAL_MS) {

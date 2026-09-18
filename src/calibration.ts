@@ -34,14 +34,21 @@ export class Calibrator {
   /** Median is used so a blink or a brief head turn does not skew the baseline. */
   finish(): Baseline | null {
     if (this.samples.length < CALIBRATION_MIN_SAMPLES) return null;
-    const withShoulders = this.samples.flatMap((s) => (s.shoulders ? [s.shoulders] : []));
-    // Only trust the shoulder signals if they were visible for most of the window.
+    const allShoulders = this.samples.flatMap((s) => (s.shoulders ? [s.shoulders] : []));
+    // Only trust the shoulder signals if they were visible for most of the window, and keep the
+    // head reference (ears or nose) that the majority of samples used.
+    const earCount = allShoulders.filter((s) => s.usesEars).length;
+    const usesEars = earCount >= allShoulders.length / 2;
+    const withShoulders = allShoulders.filter((s) => s.usesEars === usesEars);
     const shoulders: ShoulderMetrics | null =
       withShoulders.length >= this.samples.length / 2
         ? {
             width: median(withShoulders.map((s) => s.width)),
             tilt: median(withShoulders.map((s) => s.tilt)),
+            midY: median(withShoulders.map((s) => s.midY)),
             torsoRatio: median(withShoulders.map((s) => s.torsoRatio)),
+            headY: median(withShoulders.map((s) => s.headY)),
+            usesEars,
             lateral: median(withShoulders.map((s) => s.lateral)),
             headForward: median(withShoulders.map((s) => s.headForward)),
           }
@@ -82,7 +89,16 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 function isShoulderMetrics(value: unknown): value is ShoulderMetrics {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
-  return isNum(v.width) && isNum(v.tilt) && isNum(v.torsoRatio) && isNum(v.lateral) && isNum(v.headForward);
+  return (
+    isNum(v.width) &&
+    isNum(v.tilt) &&
+    isNum(v.midY) &&
+    isNum(v.torsoRatio) &&
+    isNum(v.headY) &&
+    typeof v.usesEars === 'boolean' &&
+    isNum(v.lateral) &&
+    isNum(v.headForward)
+  );
 }
 
 function isBaseline(value: unknown): value is Baseline {

@@ -1,5 +1,6 @@
 /** Posture problems the demo can flag. */
-export type Issue = 'tooClose' | 'headDown' | 'headTilt' | 'headForward' | 'slouch' | 'sideLean' | 'sitting';
+export type Issue =
+  'tooClose' | 'headDown' | 'headTilt' | 'headForward' | 'slouch' | 'shrug' | 'sideLean' | 'blink' | 'sitting';
 
 /** Hysteresis + dwell-time rule for one issue. Deviation units differ per issue (see config.ts). */
 export interface IssueRule {
@@ -24,11 +25,21 @@ export interface Point {
 export interface ShoulderMetrics {
   /** Shoulder width in pixels. */
   width: number;
-  /** Shoulder line angle in degrees; 0 = level. */
+  /** Shoulder line angle in degrees, −90..90; 0 = level. */
   tilt: number;
-  /** (shoulderMidY - noseY) / width. Shrinks when the head sinks toward the shoulders. */
+  /** Shoulder midpoint y in pixels. */
+  midY: number;
+  /**
+   * (shoulder midpoint y − head reference y) / width. Shrinks when the head sinks toward the
+   * shoulders or the shoulders rise. The reference is the ear midpoint (barely moves with head
+   * pitch) when both ears are visible, else the nose tip.
+   */
   torsoRatio: number;
-  /** (noseX - shoulderMidX) / width. Grows when the upper body leans to one side. */
+  /** Head reference y in pixels (ears or nose, see torsoRatio). */
+  headY: number;
+  /** Whether torsoRatio/headY use the ears (true) or the nose (false). */
+  usesEars: boolean;
+  /** (noseX − shoulderMidX) / width. Grows when the upper body leans to one side. */
   lateral: number;
   /** ipd / width. Grows when only the head moves toward the screen (forward head posture). */
   headForward: number;
@@ -40,12 +51,14 @@ export interface FrameMetrics {
   ipd: number;
   /** Head pitch in degrees. Positive = looking down. */
   pitch: number;
-  /** Head roll in degrees from the eye line; 0 = level. */
+  /** Head roll in degrees from the eye line, −90..90; 0 = level. */
   roll: number;
   /** Nose tip y in pixels; used as a slouch fallback when shoulders are hidden. */
   noseY: number;
   /** Forehead-to-chin distance in pixels; normalizes noseY drops. */
   faceHeight: number;
+  /** Mean eye-closure blendshape, 0 (open) to 1 (closed); null if blendshapes are unavailable. */
+  eyeClosed: number | null;
   shoulders: ShoulderMetrics | null;
   /** Pixel-space key points for the overlay. */
   points: {
@@ -53,6 +66,7 @@ export interface FrameMetrics {
     rightIris: Point;
     forehead: Point;
     chin: Point;
+    ears: [Point, Point] | null;
     shoulders: [Point, Point] | null;
   };
 }

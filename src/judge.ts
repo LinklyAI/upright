@@ -1,4 +1,7 @@
 import {
+  BLINK_CLOSE_THRESHOLD,
+  BLINK_OPEN_THRESHOLD,
+  BLINK_SEVERITY,
   SENSITIVITY_PRESETS,
   SEVERITY_RAMP_MS,
   SIDE_LEAN_LATERAL,
@@ -8,11 +11,22 @@ import {
   SLOUCH_TORSO_DROP,
   SMOOTHING_TAU_MS,
   UNSCALED_ISSUES,
+  UNSMOOTHED_ISSUES,
   type SensitivityPreset,
 } from './config';
 import type { Baseline, FrameMetrics, Issue, IssueRule, IssueState, Sensitivity, Verdict } from './types';
 
-const ISSUES: readonly Issue[] = ['tooClose', 'headDown', 'headTilt', 'headForward', 'slouch', 'sideLean', 'sitting'];
+const ISSUES: readonly Issue[] = [
+  'tooClose',
+  'headDown',
+  'headTilt',
+  'headForward',
+  'slouch',
+  'shrug',
+  'sideLean',
+  'blink',
+  'sitting',
+];
 
 /**
  * State machine for one issue: EMA smoothing, hysteresis thresholds and dwell times.
@@ -30,10 +44,11 @@ class IssueTracker {
     private readonly rule: IssueRule,
     /** Returns the current sensitivity preset; null means the rule is used as-is. */
     private readonly preset: () => SensitivityPreset | null,
+    private readonly smoothing: boolean,
   ) {}
 
   update(raw: number | null, now: number): IssueState {
-    this.smoothed = this.smooth(raw, now);
+    this.smoothed = this.smoothing ? this.smooth(raw, now) : raw;
     this.lastAt = now;
 
     const preset = this.preset();
@@ -94,9 +109,35 @@ class SeatedTimer {
   }
 }
 
+/**
+ * Counts blinks from the eye-closure blendshape with hysteresis and reports seconds since the
+ * last one. Needs several frames per second; the caller passes null when that is not the case
+ * (hidden tab) so no false "not blinking" alarm is raised.
+ */
+class BlinkTimer {
+  private closed = false;
+  private lastBlinkAt: number | null = null;
+
+  update(eyeClosed: number | null, now: number): number | null {
+    if (eyeClosed === null) {
+      this.lastBlinkAt = null;
+      this.closed = false;
+      return null;
+    }
+    this.lastBlinkAt ??= now;
+    if (!this.closed && eyeClosed >= BLINK_CLOSE_THRESHOLD) this.closed = true;
+    else if (this.closed && eyeClosed <= BLINK_OPEN_THRESHOLD) {
+      this.closed = false;
+      this.lastBlinkAt = now;
+    }
+    return (now - this.lastBlinkAt) / 1000;
+  }
+}
+
 export class PostureJudge {
   private readonly trackers: Record<Issue, IssueTracker>;
   private readonly seated = new SeatedTimer();
+  private readonly blink = new BlinkTimer();
   private sensitivity: Sensitivity = 'normal';
   private muted: ReadonlySet<Issue> = new Set();
 
@@ -108,7 +149,7 @@ export class PostureJudge {
     this.sensitivity = sensitivity;
     const preset = (issue: Issue) => () => (UNSCALED_ISSUES.has(issue) ? null : SENSITIVITY_PRESETS[this.sensitivity]);
     this.trackers = Object.fromEntries(
-      ISSUES.map((issue) => [issue, new IssueTracker(rules[issue], preset(issue))]),
+      ISSUES.map((issue) => [issue, new IssueTracker(rules[issue], preset(issue), !UNSMOOTHED_ISSUES.has(issue))]),
     ) as Record<Issue, IssueTracker>;
   }
 
@@ -131,8 +172,14 @@ export class PostureJudge {
     ) as Record<Issue, IssueState>;
 
     let severity = 0;
-    for (const state of Object.values(issues)) {
+    for (const issue of ISSUES) {
+      const state = issues[issue];
       if (!state.active || state.activeSince === null) continue;
+      // A blink reminder is a nudge, not a posture fault: it never drives the page deep red.
+      if (issue === 'blink') {
+        severity = Math.max(severity, BLINK_SEVERITY);
+        continue;
+      }
       const ramp = Math.min(1, (now - state.activeSince) / SEVERITY_RAMP_MS);
       severity = Math.max(severity, 0.35 + 0.65 * ramp);
     }
@@ -143,6 +190,7 @@ export class PostureJudge {
   /** Signed deviations from baseline; positive means "worse". See config.ts for units. */
   private deviations(metrics: FrameMetrics | null, now: number): Record<Issue, number | null> {
     const sitting = this.seated.update(metrics !== null, now);
+    const blink = this.blink.update(metrics?.eyeClosed ?? null, now);
     if (!metrics) {
       return {
         tooClose: null,
@@ -150,21 +198,33 @@ export class PostureJudge {
         headTilt: null,
         headForward: null,
         slouch: null,
+        shrug: null,
         sideLean: null,
+        blink,
         sitting,
       };
     }
     const b = this.baseline;
     const s = metrics.shoulders;
-    const bs = b.shoulders;
+    // Shoulder-relative checks only make sense when the head reference matches the baseline's.
+    const bs = s && b.shoulders && s.usesEars === b.shoulders.usesEars ? b.shoulders : null;
 
-    // Shoulder-based slouch when available; otherwise fall back to the nose sinking in frame.
-    // The fallback is not used alongside shoulders because moving closer also lowers the face
-    // when the camera sits above eye level.
-    const slouch =
-      s && bs
-        ? (1 - s.torsoRatio / bs.torsoRatio) / SLOUCH_TORSO_DROP
-        : (metrics.noseY - b.noseY) / b.faceHeight / SLOUCH_NOSE_DROP;
+    let slouch: number;
+    let shrug: number | null = null;
+    if (s && bs) {
+      // Positions relative to calibration, in units of the calibrated shoulder width.
+      const shoulderRise = (bs.midY - s.midY) / bs.width;
+      const headRise = (bs.headY - s.headY) / bs.width;
+      // Shoulders coming up toward a head that stayed put. Whole-body movement cancels out.
+      shrug = shoulderRise - Math.max(0, headRise);
+      // Head-to-shoulder distance shrinking, minus the part explained by a shrug.
+      const torsoDrop = 1 - s.torsoRatio / bs.torsoRatio;
+      slouch = (torsoDrop - Math.max(0, shrug) / bs.torsoRatio) / SLOUCH_TORSO_DROP;
+    } else {
+      // Fall back to the nose sinking in frame. Not used alongside shoulders because moving
+      // closer also lowers the face when the camera sits above eye level.
+      slouch = (metrics.noseY - b.noseY) / b.faceHeight / SLOUCH_NOSE_DROP;
+    }
 
     const sideLean =
       s && bs
@@ -180,7 +240,9 @@ export class PostureJudge {
       headTilt: Math.abs(metrics.roll - b.roll),
       headForward: s && bs ? s.headForward / bs.headForward - 1 : null,
       slouch,
+      shrug,
       sideLean,
+      blink,
       sitting,
     };
   }

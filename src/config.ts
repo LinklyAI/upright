@@ -41,6 +41,13 @@ export const SITTING_LIMIT_MIN = 45;
 /** Leaving the frame for this long counts as standing up and resets the sitting timer. */
 export const SITTING_ABSENCE_RESET_MS = 120000;
 
+/** Blink detection: eye-closure blendshape hysteresis, and how red a blink reminder may tint the page. */
+export const BLINK_CLOSE_THRESHOLD = 0.5;
+export const BLINK_OPEN_THRESHOLD = 0.3;
+export const BLINK_SEVERITY = 0.2;
+/** Blink detection needs several frames per second; below this it is suspended. */
+export const BLINK_MIN_FPS = 4;
+
 /**
  * Deviation units:
  * - tooClose:    ipd / baseline.ipd - 1 (0.12 = 12% closer)
@@ -48,7 +55,9 @@ export const SITTING_ABSENCE_RESET_MS = 120000;
  * - headTilt:    |roll - baseline.roll| in degrees
  * - headForward: (ipd / shoulderWidth) / baseline - 1
  * - slouch:      normalized score, 1 = component threshold reached
+ * - shrug:       shoulders risen toward the head, as a fraction of shoulder width
  * - sideLean:    normalized score, 1 = component threshold reached
+ * - blink:       seconds since the last blink
  * - sitting:     minutes seated without a break
  */
 export const RULES: Record<Issue, IssueRule> = {
@@ -57,8 +66,11 @@ export const RULES: Record<Issue, IssueRule> = {
   headTilt: { enter: 12, exit: 6, enterMs: 3000, exitMs: 1500 },
   headForward: { enter: 0.18, exit: 0.09, enterMs: 3000, exitMs: 1500 },
   slouch: { enter: 1, exit: 0.5, enterMs: 3000, exitMs: 1500 },
+  shrug: { enter: 0.12, exit: 0.06, enterMs: 3000, exitMs: 1500 },
   // Leaning briefly is normal; only sustained leaning is flagged.
   sideLean: { enter: 1, exit: 0.5, enterMs: 8000, exitMs: 1500 },
+  // Normal spontaneous blinking is every 3-5 s; staring at a screen stretches that well past 10 s.
+  blink: { enter: 12, exit: 6, enterMs: 0, exitMs: 300 },
   sitting: {
     enter: SITTING_LIMIT_MIN,
     exit: SITTING_LIMIT_MIN,
@@ -68,7 +80,9 @@ export const RULES: Record<Issue, IssueRule> = {
 };
 
 /** Issues whose thresholds are not affected by the sensitivity setting. */
-export const UNSCALED_ISSUES: ReadonlySet<Issue> = new Set<Issue>(['sitting']);
+export const UNSCALED_ISSUES: ReadonlySet<Issue> = new Set<Issue>(['blink', 'sitting']);
+/** Issues whose value is already a timer and must not be EMA-smoothed. */
+export const UNSMOOTHED_ISSUES: ReadonlySet<Issue> = new Set<Issue>(['blink', 'sitting']);
 
 export interface SensitivityPreset {
   /** Multiplied into enter/exit thresholds. */
@@ -83,4 +97,4 @@ export const SENSITIVITY_PRESETS: Record<Sensitivity, SensitivityPreset> = {
   high: { threshold: 0.6, dwell: 0.67 },
 };
 
-export const STORAGE_KEY_BASELINE = 'posture-guard.baseline.v2';
+export const STORAGE_KEY_BASELINE = 'posture-guard.baseline.v3';

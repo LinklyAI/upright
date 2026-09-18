@@ -37,13 +37,17 @@ camera → MediaPipe Face Landmarker + Pose Landmarker (WASM/WebGPU, on device)
 | Head tilt        | absolute change in the eye-line angle (degrees)                                                                              | 12° / 6°                |
 | Forward head     | (pupil distance / shoulder width) / baseline − 1; rises when only the head moves forward                                     | 18% / 9%                |
 | Slouching        | 1 − (nose-to-shoulder height / shoulder width) / baseline; falls back to the nose sinking in frame when shoulders are hidden | 18% / 9% (fallback 40%) |
+| Raised shoulders | shoulders rising in frame toward a head that stayed put, as a fraction of shoulder width; whole-body movement cancels out    | 12% / 6%                |
 | Leaning sideways | the larger of shoulder-line tilt (14°) and lateral nose offset (30% of shoulder width); must persist for 8 s                 | threshold / half        |
+| Blink reminder   | seconds since the last blink, from the eye-closure blendshapes; suspended in background tabs where blinks cannot be seen     | 12 s / 6 s              |
 | Sitting too long | continuous time in frame; leaving for two minutes counts as standing up                                                      | 45 min                  |
 
 - Every check is **relative to a personal baseline**, so camera angle, offset, height and chair height cancel out during calibration.
 - A problem must persist for three seconds before the alarm fires, and clears after 1.5 seconds of good posture. Enter and exit thresholds differ to avoid flapping at the boundary.
 - The **Sensitivity** control scales all thresholds and dwell times: low ×1.4 / ×1.33, normal ×1, high ×0.6 / ×0.67. Sitting time is unaffected.
-- Click any check to turn it off; a muted check keeps measuring but never alarms. The choice is remembered.
+- Click any check to turn it off; a muted check keeps measuring but never alarms. The choice is remembered. The blink reminder also has its own switch.
+- Slouching is measured from the ears rather than the nose, so looking down no longer reads as slouching, and the part explained by raised shoulders is subtracted.
+- **Pause** releases the camera and stops all alerts; **Resume** reopens it without reloading the models.
 - Leaving the frame counts as good posture, so alarms clear when you walk away.
 - Thresholds and time constants live in `src/config.ts`.
 

@@ -16,6 +16,7 @@ export interface Elements {
   pip: HTMLButtonElement;
   sensitivity: HTMLFieldSetElement;
   sound: HTMLInputElement;
+  eyeCare: HTMLInputElement;
   theme: HTMLButtonElement;
   language: HTMLSelectElement;
   log: HTMLElement;
@@ -44,6 +45,7 @@ export function getElements(): Elements {
     pip: byId('pip'),
     sensitivity: byId('sensitivity'),
     sound: byId('sound'),
+    eyeCare: byId('eye-care'),
     theme: byId('theme'),
     language: byId('language'),
     log: byId('log'),
@@ -74,9 +76,19 @@ export function writeSensitivity(fieldset: HTMLFieldSetElement, value: Sensitivi
 
 // ---------- gauges: one per issue, built once, updated in place ----------
 
-const ISSUE_ORDER: Issue[] = ['tooClose', 'headDown', 'headTilt', 'headForward', 'slouch', 'sideLean', 'sitting'];
+const ISSUE_ORDER: Issue[] = [
+  'tooClose',
+  'headDown',
+  'headTilt',
+  'headForward',
+  'slouch',
+  'shrug',
+  'sideLean',
+  'blink',
+  'sitting',
+];
 
-type Unit = '%' | '°' | '×' | 'min';
+type Unit = '%' | '°' | '×' | 's' | 'min';
 
 const ISSUE_LABEL_KEYS: Record<Issue, Key> = {
   tooClose: 'issueTooClose',
@@ -84,7 +96,9 @@ const ISSUE_LABEL_KEYS: Record<Issue, Key> = {
   headTilt: 'issueHeadTilt',
   headForward: 'issueHeadForward',
   slouch: 'issueSlouch',
+  shrug: 'issueShrug',
   sideLean: 'issueSideLean',
+  blink: 'issueBlink',
   sitting: 'issueSitting',
 };
 
@@ -94,7 +108,9 @@ const ISSUE_UNITS: Record<Issue, Unit> = {
   headTilt: '°',
   headForward: '%',
   slouch: '×',
+  shrug: '%',
   sideLean: '×',
+  blink: 's',
   sitting: 'min',
 };
 
@@ -120,6 +136,8 @@ function formatDeviation(state: IssueState | undefined, unit: Unit): string {
       return `${fmt(v, 1, 5)}°`;
     case '×':
       return `${fmt(v, 2, 5)}×`;
+    case 's':
+      return `${fmt(v, 0, 3)} s`;
     case 'min':
       return `${fmt(v, 0, 3)} min`;
   }
@@ -130,7 +148,7 @@ function formatGauge(state: IssueState | undefined, unit: Unit): string {
   if (!state || state.value === null) return '—';
   const digits = unit === '%' ? 0 : unit === '°' ? 1 : unit === '×' ? 2 : 0;
   const scale = unit === '%' ? 100 : 1;
-  const suffix = unit === 'min' ? ' min' : unit;
+  const suffix = unit === 'min' || unit === 's' ? ` ${unit}` : unit;
   return `${fmt(Math.max(0, state.value) * scale, digits)} / ${fmt(state.threshold * scale, digits)}${suffix}`;
 }
 
@@ -193,7 +211,7 @@ export function issueLabel(issue: Issue): string {
 
 export function describeVerdict(verdict: Verdict): string {
   const active = ISSUE_ORDER.filter((issue) => verdict.issues[issue].active).map((issue) =>
-    issue === 'sitting' ? t('sittingMessage') : t(ISSUE_LABEL_KEYS[issue]),
+    issue === 'sitting' ? t('sittingMessage') : issue === 'blink' ? t('blinkMessage') : t(ISSUE_LABEL_KEYS[issue]),
   );
   return active.join(getLocale() === 'zh' ? '、' : ', ');
 }
@@ -206,9 +224,11 @@ const METRIC_ROW_KEYS: Key[] = [
   'metricRoll',
   'metricHeadForward',
   'metricTorso',
+  'metricShoulderY',
   'metricNoseY',
   'metricShoulderTilt',
   'metricLateral',
+  'metricBlink',
   'metricSeated',
 ];
 
@@ -241,9 +261,11 @@ export function renderMetrics(
     [fmt(metrics?.roll, 1, 6), fmt(baseline?.roll, 1, 6), formatDeviation(v?.headTilt, '°')],
     [fmt(s?.headForward, 3, 6), fmt(bs?.headForward, 3, 6), formatDeviation(v?.headForward, '%')],
     [fmt(s?.torsoRatio, 2, 6), fmt(bs?.torsoRatio, 2, 6), s ? formatDeviation(v?.slouch, '×') : '—'],
+    [fmt(s?.midY, 0, 6), fmt(bs?.midY, 0, 6), formatDeviation(v?.shrug, '%')],
     [fmt(metrics?.noseY, 0, 6), fmt(baseline?.noseY, 0, 6), s ? '—' : formatDeviation(v?.slouch, '×')],
     [fmt(s?.tilt, 1, 6), fmt(bs?.tilt, 1, 6), formatDeviation(v?.sideLean, '×')],
     [fmt(s?.lateral, 2, 6), fmt(bs?.lateral, 2, 6), '—'],
+    [fmt(metrics?.eyeClosed, 2, 6), '—', formatDeviation(v?.blink, 's')],
     [formatDeviation(v?.sitting, 'min'), '—', '—'],
   ];
   const rows = tbody.querySelectorAll('tr');

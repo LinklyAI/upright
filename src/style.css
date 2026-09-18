@@ -207,6 +207,9 @@ input:focus-visible + .switch__track {
   line-height: 1.6;
   color: var(--muted);
 }
+.stage-column .toolbar {
+  margin-top: 16px;
+}
 
 /* ---------- right column ---------- */
 .side {
@@ -354,8 +357,13 @@ input:focus-visible + .switch__track {
   align-items: center;
 }
 .toolbar__row--settings {
-  justify-content: space-between;
   gap: 20px;
+}
+.toolbar__switches {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .btn {

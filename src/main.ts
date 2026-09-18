@@ -2,7 +2,7 @@ import './style.css';
 import { Alerter } from './alerts';
 import { Calibrator, loadBaseline, saveBaseline } from './calibration';
 import { openCamera, requestWakeLock } from './camera';
-import { CALIBRATION_MS, RULES, TICK_MS } from './config';
+import { BLINK_MIN_FPS, CALIBRATION_MS, RULES, TICK_MS } from './config';
 import { applyStaticStrings, getLocale, setLocale, t } from './i18n';
 import { PostureJudge } from './judge';
 import { Landmarkers } from './landmarkers';
@@ -43,10 +43,21 @@ let calibrator: Calibrator | null = null;
 let baseline: Baseline | null = loadBaseline();
 let sensitivity: Sensitivity = loadSensitivity();
 const muted: Set<Issue> = loadMutedIssues();
+let stream: MediaStream | null = null;
+let timer: number | null = null;
 let lastVerdictAlarm = false;
 let lastTimestamp = 0;
 let frameCount = 0;
 let fpsWindowStart = performance.now();
+let currentFps = 0;
+
+const running = (): boolean => timer !== null;
+
+/** The primary button is Start before the first run, then toggles between Pause and Resume. */
+function updateStartButton(): void {
+  els.start.dataset.i18n = running() ? 'btnPause' : landmarkers ? 'btnResume' : 'btnStart';
+  els.start.textContent = t(els.start.dataset.i18n as 'btnPause' | 'btnResume' | 'btnStart');
+}
 
 /** Everything with translatable text that is rendered from JS rather than the HTML. */
 function applyLocale(): void {
@@ -55,26 +66,29 @@ function applyLocale(): void {
   buildGauges(els.issues, toggleMuted);
   renderGauges(els.issues, null, muted);
   buildMetricsTable(els.metrics);
+  updateStartButton();
   if (!landmarkers) {
     setVerdict(els, 'idle', t('statusIdle'));
     els.fps.textContent = t('fpsWaiting');
+  } else if (!running()) {
+    setVerdict(els, 'idle', t('paused'));
   }
 }
 
-/** Clicking a gauge mutes or unmutes that check; the choice is remembered. */
-function toggleMuted(issue: Issue): void {
-  const nowMuted = !muted.has(issue);
-  if (nowMuted) muted.add(issue);
+/** Mutes or unmutes one check and keeps every control that shows it in sync. */
+function setMuted(issue: Issue, isMuted: boolean): void {
+  if (isMuted) muted.add(issue);
   else muted.delete(issue);
   saveMutedIssues(muted);
   judge?.setMuted(muted);
   renderGauges(els.issues, null, muted);
-  appendLog(
-    els.log,
-    t(nowMuted ? 'checkMutedLog' : 'checkUnmutedLog', {
-      name: issueLabel(issue),
-    }),
-  );
+  if (issue === 'blink') els.eyeCare.checked = !isMuted;
+  appendLog(els.log, t(isMuted ? 'checkMutedLog' : 'checkUnmutedLog', { name: issueLabel(issue) }));
+}
+
+/** Clicking a gauge mutes or unmutes that check; the choice is remembered. */
+function toggleMuted(issue: Issue): void {
+  setMuted(issue, !muted.has(issue));
 }
 
 initTheme(els.theme);
@@ -82,6 +96,7 @@ applyLocale();
 writeSensitivity(els.sensitivity, sensitivity);
 els.sound.checked = loadSoundEnabled();
 alerter.soundEnabled = els.sound.checked;
+els.eyeCare.checked = !muted.has('blink');
 if (baseline) judge = createJudge(baseline);
 
 function createJudge(base: Baseline): PostureJudge {
@@ -94,6 +109,7 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** First run: open the camera, load the models, start the loop. Later runs only reopen the camera. */
 async function start(): Promise<void> {
   els.start.disabled = true;
   try {
@@ -102,24 +118,53 @@ async function start(): Promise<void> {
     void alerter.requestNotificationPermission();
 
     setVerdict(els, 'busy', t('openingCamera'));
-    const stream = await openCamera();
+    stream = await openCamera();
     els.video.srcObject = stream;
     await els.video.play();
     els.stageHint.hidden = true;
     overlay.resize(els.video.videoWidth, els.video.videoHeight);
 
-    landmarkers = await Landmarkers.load((delegate) => setVerdict(els, 'busy', t('loadingModel', { delegate })));
-    appendLog(els.log, t('modelLoaded', { delegate: landmarkers.delegate }));
+    const firstRun = landmarkers === null;
+    if (firstRun) {
+      landmarkers = await Landmarkers.load((delegate) => setVerdict(els, 'busy', t('loadingModel', { delegate })));
+      appendLog(els.log, t('modelLoaded', { delegate: landmarkers.delegate }));
+    } else {
+      // Dwell timers must not count the pause as elapsed time.
+      if (baseline) judge = createJudge(baseline);
+      appendLog(els.log, t('resumedLog'));
+    }
     await requestWakeLock();
 
-    window.setInterval(tick, TICK_MS);
+    timer = window.setInterval(tick, TICK_MS);
     els.calibrate.disabled = false;
     els.pip.disabled = !isPipSupported();
     setVerdict(els, judge ? 'ok' : 'busy', judge ? t('runningPrevious') : t('runningCalibrate'));
   } catch (error) {
     setVerdict(els, 'bad', t('startFailed', { error: errorMessage(error) }));
+  } finally {
     els.start.disabled = false;
+    updateStartButton();
   }
+}
+
+/** Stops detection and releases the camera; models stay loaded for a quick resume. */
+function pause(): void {
+  if (timer !== null) window.clearInterval(timer);
+  timer = null;
+  calibrator = null;
+  stream?.getTracks().forEach((track) => track.stop());
+  stream = null;
+  els.video.srcObject = null;
+  els.stageHint.hidden = false;
+  els.calibrate.disabled = true;
+  overlay.draw(null, null);
+  alerter.reset();
+  lastVerdictAlarm = false;
+  renderGauges(els.issues, null, muted);
+  setVerdict(els, 'idle', t('paused'));
+  els.fps.textContent = t('fpsWaiting');
+  appendLog(els.log, t('pausedLog'));
+  updateStartButton();
 }
 
 function tick(): void {
@@ -133,6 +178,8 @@ function tick(): void {
   const raw = landmarkers.detect(els.video, now);
   const metrics = computeMetrics(raw, els.video.videoWidth, els.video.videoHeight);
   trackFps(now);
+  // Blinks last ~150 ms; at background frame rates they are missed, which would read as staring.
+  if (metrics && (document.hidden || currentFps < BLINK_MIN_FPS)) metrics.eyeClosed = null;
 
   if (calibrator) {
     calibrator.add(metrics);
@@ -194,6 +241,7 @@ function trackFps(now: number): void {
   frameCount += 1;
   if (now - fpsWindowStart >= 1000) {
     const fps = (frameCount * 1000) / (now - fpsWindowStart);
+    currentFps = fps;
     const mode = document.hidden ? t('fpsBackground') : (landmarkers?.delegate ?? '');
     els.fps.textContent = `${fps.toFixed(1).padStart(4, ' ')} fps · ${mode}`;
     frameCount = 0;
@@ -201,7 +249,10 @@ function trackFps(now: number): void {
   }
 }
 
-els.start.addEventListener('click', () => void start());
+els.start.addEventListener('click', () => {
+  if (running()) pause();
+  else void start();
+});
 
 els.calibrate.addEventListener('click', () => {
   calibrator = new Calibrator(performance.now(), CALIBRATION_MS);
@@ -242,6 +293,10 @@ els.language.addEventListener('change', () => {
 els.sound.addEventListener('change', () => {
   alerter.soundEnabled = els.sound.checked;
   saveSoundEnabled(els.sound.checked);
+});
+
+els.eyeCare.addEventListener('change', () => {
+  setMuted('blink', !els.eyeCare.checked);
 });
 
 document.addEventListener('visibilitychange', () => {

@@ -47,19 +47,6 @@
           <canvas id="overlay"></canvas>
           <div id="stage-hint" class="stage__hint" data-i18n="stageHint">Click "Start camera" to begin</div>
         </section>
-      </div>
-
-      <div class="side">
-        <section id="panel" class="panel">
-          <div class="verdict">
-            <span id="verdict-dot" class="verdict__dot verdict__dot--idle" aria-hidden="true"></span>
-            <div class="verdict__text">
-              <div id="status" class="verdict__title">Not started</div>
-              <div id="fps" class="verdict__meta">Waiting for camera</div>
-            </div>
-          </div>
-          <div id="issues" class="gauges" data-i18n-aria="checksAria"></div>
-        </section>
 
         <section class="toolbar" data-i18n-aria="controlsAria">
           <div class="toolbar__row">
@@ -86,12 +73,32 @@
                 ></label
               >
             </fieldset>
-            <label class="switch">
-              <input id="sound" type="checkbox" checked />
-              <span class="switch__track" aria-hidden="true"></span>
-              <span data-i18n="sound">Sound alerts</span>
-            </label>
+            <div class="toolbar__switches">
+              <label class="switch">
+                <input id="sound" type="checkbox" checked />
+                <span class="switch__track" aria-hidden="true"></span>
+                <span data-i18n="sound">Sound alerts</span>
+              </label>
+              <label class="switch">
+                <input id="eye-care" type="checkbox" checked />
+                <span class="switch__track" aria-hidden="true"></span>
+                <span data-i18n="eyeCare">Blink reminder</span>
+              </label>
+            </div>
           </div>
+        </section>
+      </div>
+
+      <div class="side">
+        <section id="panel" class="panel">
+          <div class="verdict">
+            <span id="verdict-dot" class="verdict__dot verdict__dot--idle" aria-hidden="true"></span>
+            <div class="verdict__text">
+              <div id="status" class="verdict__title">Not started</div>
+              <div id="fps" class="verdict__meta">Waiting for camera</div>
+            </div>
+          </div>
+          <div id="issues" class="gauges" data-i18n-aria="checksAria"></div>
         </section>
 
         <details class="details" open>
@@ -124,7 +131,8 @@
       </div>
     </main>
 
-    <div id="alarm-overlay" class="alarm-overlay" aria-hidden="true"></div>
+    <!-- Inline opacity so the wash never animates in from an unstyled state while the CSS loads. -->
+    <div id="alarm-overlay" class="alarm-overlay" aria-hidden="true" style="opacity: 0"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

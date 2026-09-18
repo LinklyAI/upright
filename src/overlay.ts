@@ -25,12 +25,14 @@ export class Overlay {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!metrics) return;
 
-    const { leftIris, rightIris, forehead, chin, shoulders } = metrics.points;
+    const { leftIris, rightIris, forehead, chin, ears, shoulders } = metrics.points;
     const issues = verdict?.issues;
-    const eyeColor = issues?.tooClose.active || issues?.headTilt.active ? COLOR_BAD : COLOR_OK;
+    const eyeColor = issues?.tooClose.active || issues?.headTilt.active || issues?.blink.active ? COLOR_BAD : COLOR_OK;
     const headColor = issues?.headDown.active ? COLOR_BAD : COLOR_OK;
     const shoulderColor =
-      issues?.slouch.active || issues?.sideLean.active || issues?.headForward.active ? COLOR_BAD : COLOR_OK;
+      issues?.slouch.active || issues?.shrug.active || issues?.sideLean.active || issues?.headForward.active
+        ? COLOR_BAD
+        : COLOR_OK;
 
     ctx.lineWidth = 2;
 
@@ -44,12 +46,16 @@ export class Overlay {
     this.dot(forehead, headColor);
     this.dot(chin, headColor);
 
-    // Shoulder line: slouch, side lean and forward head.
+    // Shoulder line: slouch, shrug, side lean and forward head. Ears are the head reference.
     if (shoulders) {
       const [left, right] = shoulders;
       this.line(left, right, shoulderColor);
       this.dot(left, shoulderColor);
       this.dot(right, shoulderColor);
+      if (ears) {
+        this.dot(ears[0], shoulderColor);
+        this.dot(ears[1], shoulderColor);
+      }
     } else {
       this.note(t('shouldersHidden'));
     }

@@ -45,7 +45,17 @@ export function saveSoundEnabled(enabled: boolean): void {
   write(KEYS.sound, enabled ? 'on' : 'off');
 }
 
-const ISSUES: readonly Issue[] = ['tooClose', 'headDown', 'headTilt', 'headForward', 'slouch', 'sideLean', 'sitting'];
+const ISSUES: readonly Issue[] = [
+  'tooClose',
+  'headDown',
+  'headTilt',
+  'headForward',
+  'slouch',
+  'shrug',
+  'sideLean',
+  'blink',
+  'sitting',
+];
 
 /** Checks the user switched off by clicking their gauge. */
 export function loadMutedIssues(): Set<Issue> {
