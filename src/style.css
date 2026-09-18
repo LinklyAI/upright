@@ -231,6 +231,48 @@ input:focus-visible + .switch__track {
   margin-top: 16px;
 }
 
+/* ---------- FAQ: collapsed by default, one rule between items ---------- */
+.faq {
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.faq__item {
+  border-bottom: 1px solid var(--line);
+}
+.faq__item summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 0;
+  font-size: 13px;
+}
+.faq__item summary::-webkit-details-marker {
+  display: none;
+}
+.faq__item summary::before {
+  content: '▸';
+  flex: none;
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.faq__item[open] summary::before {
+  transform: rotate(90deg);
+}
+.faq__item summary:hover {
+  color: var(--accent);
+}
+.faq__item p {
+  margin: 0 0 14px 20px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--muted);
+  max-width: 62ch;
+}
+
 /* ---------- right column ---------- */
 .side {
   display: grid;
