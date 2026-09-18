@@ -100,6 +100,25 @@ const en = {
   wentBackground: 'Tab in background, detection continues at a lower rate',
   cameForeground: 'Tab in foreground',
   notificationTitle: 'Posture reminder',
+  faqTitle: 'FAQ',
+  faqLookAwayQ: 'Why look away every 20 minutes?',
+  faqLookAwayA:
+    'Focusing on a screen an arm away keeps the tiny muscle inside each eye flexed the whole time. Twenty seconds on something six metres away is its coffee break. Eye doctors call it the 20-20-20 rule; we just enforce it.',
+  faqSittingQ: 'Why not sit for hours?',
+  faqSittingA:
+    'The chair is not the enemy, the second hour is. Sit long enough and your big leg muscles clock out, your metabolism follows, and your lower back is left holding the whole shift alone. Two minutes on your feet every 45 beats any chair money can buy.',
+  faqBlinkQ: 'Why blink more?',
+  faqBlinkA:
+    'You blink about 15 times a minute in normal life and under 5 when you stare at a screen. Each blink repaints the tear film; skip them and your eyes get dry, gritty and red. Blinking is free eye drops. Use them.',
+  faqTooCloseQ: 'Why keep the screen at a distance?',
+  faqTooCloseA:
+    'The closer the screen, the harder your eyes work to focus, and the faster they tire. Your neck usually joins in by craning forward, which multiplies the load on your spine. About an arm’s length, 50 to 70 cm, is the comfortable spot.',
+  faqPrivacyQ: 'Does my camera feed go anywhere?',
+  faqPrivacyA:
+    'No. The models run inside your browser and the video never leaves this computer; there is no server to receive it. Once the page has loaded you can pull the network cable and it keeps working.',
+  faqCalibrateQ: 'Why calibrate first?',
+  faqCalibrateA:
+    'Every camera angle, chair height and body is different, so there is no universal number for “sitting straight”. Calibration records what upright looks like on you, and every check is measured against that. So actually sit up for those three seconds. It remembers.',
 } as const;
 
 export type Key = keyof typeof en;
@@ -198,6 +217,25 @@ const zh: Record<Key, string> = {
   wentBackground: '页面进入后台，继续以降频检测',
   cameForeground: '页面回到前台',
   notificationTitle: '坐姿提醒',
+  faqTitle: '常见问题',
+  faqLookAwayQ: '为什么每 20 分钟要远眺？',
+  faqLookAwayA:
+    '盯着一臂之内的屏幕时，眼睛里负责对焦的小肌肉一直在举铁。每 20 分钟看 6 米外 20 秒，等于让它放下杠铃喘口气。这叫 20-20-20 法则，是眼科医生想出来的，我们只负责催。',
+  faqSittingQ: '为什么不要久坐？',
+  faqSittingA:
+    '椅子不是敌人，第二个小时才是。坐久了腿部的大肌群下班，代谢跟着放假，腰椎只能独自扛完整个班。每 45 分钟起来走两分钟，比再贵的椅子都管用。',
+  faqBlinkQ: '为什么要多眨眼？',
+  faqBlinkA:
+    '平时每分钟眨 15 次左右，盯屏幕时会掉到 5 次以下。每次眨眼都在给眼球表面重新刷一层泪膜，省掉它，眼睛就会干、涩、发红。眨眼是免费的眼药水，别省。',
+  faqTooCloseQ: '为什么离屏幕不要太近？',
+  faqTooCloseA:
+    '越近，眼睛为了对焦越吃力，疲劳来得越快；脖子通常还会跟着往前探，把头的重量成倍压到颈椎上。一臂远，也就是 50 到 70 厘米，是舒服的距离。',
+  faqPrivacyQ: '我的画面会上传吗？',
+  faqPrivacyA:
+    '不会。模型在你的浏览器里运行，画面不离开这台电脑，也没有服务器可以收。页面加载完之后拔掉网线，它照样工作。',
+  faqCalibrateQ: '为什么要先校准？',
+  faqCalibrateA:
+    '每个人的摄像头角度、椅子高度、身材都不一样，"坐直"没有通用数值。校准就是记住你坐直时的样子，之后所有判断都拿它来比。所以那三秒请真的坐直，它记性很好。',
 };
 
 const TABLES: Record<Locale, Record<Key, string>> = { en, zh };
