@@ -8,6 +8,7 @@ import { Landmarkers } from './landmarkers';
 import { computeMetrics } from './metrics';
 import { Overlay } from './overlay';
 import { isPipSupported, openPip } from './pip';
+import { initTheme } from './theme';
 import type { Baseline, Sensitivity, Verdict } from './types';
 import {
   appendLog,
@@ -36,6 +37,7 @@ let lastTimestamp = 0;
 let frameCount = 0;
 let fpsWindowStart = performance.now();
 
+initTheme(els.theme);
 buildGauges(els.issues);
 buildMetricsTable(els.metrics);
 writeSensitivity(els.sensitivity, sensitivity);

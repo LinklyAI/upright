@@ -3,25 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
     <title>Posture Guard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
-    />
   </head>
   <body>
     <main class="app">
       <header class="masthead">
-        <div class="masthead__brand">
-          <span class="masthead__mark" aria-hidden="true"></span>
-          <h1>Posture Guard</h1>
-        </div>
-        <p class="masthead__tagline">
-          本地摄像头坐姿监测。画面只在这台电脑上处理，不上传。
-        </p>
+        <div class="brand">Posture Guard<span>本地坐姿监测</span></div>
+        <nav class="masthead__nav">
+          <span class="masthead__note">画面只在本机处理，不上传</span>
+          <button id="theme" type="button" aria-label="切换明暗主题">◐</button>
+        </nav>
       </header>
 
       <section class="stage" aria-label="摄像头画面">

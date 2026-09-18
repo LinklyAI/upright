@@ -16,6 +16,7 @@ export interface Elements {
   pip: HTMLButtonElement;
   sensitivity: HTMLFieldSetElement;
   sound: HTMLInputElement;
+  theme: HTMLButtonElement;
   log: HTMLElement;
   alarmOverlay: HTMLElement;
 }
@@ -42,6 +43,7 @@ export function getElements(): Elements {
     pip: byId('pip'),
     sensitivity: byId('sensitivity'),
     sound: byId('sound'),
+    theme: byId('theme'),
     log: byId('log'),
     alarmOverlay: byId('alarm-overlay'),
   };

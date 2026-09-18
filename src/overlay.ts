@@ -61,7 +61,7 @@ export class Overlay {
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.fillStyle = COLOR_MUTED;
-    ctx.font = '13px system-ui';
+    ctx.font = '12px ui-monospace, Menlo, monospace';
     ctx.fillText(text, 12, canvas.height - 12);
     ctx.restore();
   }
