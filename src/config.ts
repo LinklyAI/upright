@@ -31,7 +31,8 @@ export const NOTIFY_INTERVAL_MS = 30000;
 export const HEAD_PITCH_SIGN = 1;
 
 /** Component thresholds folded into the composite (normalized) slouch and sideLean scores. */
-export const SLOUCH_TORSO_DROP = 0.18;
+/** Ear-to-shoulder distance is larger than nose-to-shoulder, so the same movement is a smaller fraction. */
+export const SLOUCH_TORSO_DROP = 0.12;
 export const SLOUCH_NOSE_DROP = 0.4;
 export const SIDE_LEAN_TILT_DEG = 14;
 export const SIDE_LEAN_LATERAL = 0.3;
@@ -66,7 +67,8 @@ export const RULES: Record<Issue, IssueRule> = {
   headTilt: { enter: 12, exit: 6, enterMs: 3000, exitMs: 1500 },
   headForward: { enter: 0.18, exit: 0.09, enterMs: 3000, exitMs: 1500 },
   slouch: { enter: 1, exit: 0.5, enterMs: 3000, exitMs: 1500 },
-  shrug: { enter: 0.12, exit: 0.06, enterMs: 3000, exitMs: 1500 },
+  // A real shrug lifts the shoulders 3-5 cm, about 8-12% of shoulder width.
+  shrug: { enter: 0.08, exit: 0.04, enterMs: 3000, exitMs: 1500 },
   // Leaning briefly is normal; only sustained leaning is flagged.
   sideLean: { enter: 1, exit: 0.5, enterMs: 8000, exitMs: 1500 },
   // Normal spontaneous blinking is every 3-5 s; staring at a screen stretches that well past 10 s.

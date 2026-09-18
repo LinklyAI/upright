@@ -215,11 +215,12 @@ export class PostureJudge {
       // Positions relative to calibration, in units of the calibrated shoulder width.
       const shoulderRise = (bs.midY - s.midY) / bs.width;
       const headRise = (bs.headY - s.headY) / bs.width;
-      // Shoulders coming up toward a head that stayed put. Whole-body movement cancels out.
-      shrug = shoulderRise - Math.max(0, headRise);
-      // Head-to-shoulder distance shrinking, minus the part explained by a shrug.
-      const torsoDrop = 1 - s.torsoRatio / bs.torsoRatio;
-      slouch = (torsoDrop - Math.max(0, shrug) / bs.torsoRatio) / SLOUCH_TORSO_DROP;
+      // Shoulders coming up while the head stays put. Any head movement (whole body rising, or
+      // the head dropping in a slouch) is deducted, so only a true shrug scores.
+      shrug = shoulderRise - Math.abs(headRise);
+      // Head-to-shoulder distance shrinking. Hunching also rolls the shoulders up in frame, so
+      // no shrug component is subtracted here; that would hide a real slouch.
+      slouch = (1 - s.torsoRatio / bs.torsoRatio) / SLOUCH_TORSO_DROP;
     } else {
       // Fall back to the nose sinking in frame. Not used alongside shoulders because moving
       // closer also lowers the face when the camera sits above eye level.
