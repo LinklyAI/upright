@@ -156,6 +156,7 @@ function pause(): void {
   stream = null;
   els.video.srcObject = null;
   els.stageHint.hidden = false;
+  els.stageAlert.hidden = true;
   els.calibrate.disabled = true;
   overlay.draw(null, null);
   alerter.reset();
@@ -197,6 +198,9 @@ function tick(): void {
   if (!verdict) return;
   const message = describeVerdict(verdict);
   alerter.apply(verdict, message, now);
+  // Banner over the camera so the active check can be read at a glance.
+  els.stageAlert.hidden = !verdict.alarm;
+  if (verdict.alarm && els.stageAlert.textContent !== message) els.stageAlert.textContent = message;
 
   if (verdict.alarm !== lastVerdictAlarm) {
     appendLog(els.log, verdict.alarm ? t('alarmLog', { message }) : t('recoveredLog'));

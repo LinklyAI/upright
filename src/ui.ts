@@ -5,6 +5,7 @@ export interface Elements {
   video: HTMLVideoElement;
   canvas: HTMLCanvasElement;
   stageHint: HTMLElement;
+  stageAlert: HTMLElement;
   panel: HTMLElement;
   verdictDot: HTMLElement;
   status: HTMLElement;
@@ -34,6 +35,7 @@ export function getElements(): Elements {
     video: byId('video'),
     canvas: byId('overlay'),
     stageHint: byId('stage-hint'),
+    stageAlert: byId('stage-alert'),
     panel: byId('panel'),
     verdictDot: byId('verdict-dot'),
     status: byId('status'),

@@ -201,6 +201,26 @@ input:focus-visible + .switch__track {
 .stage__hint[hidden] {
   display: none;
 }
+/* Alarm banner pinned to the top of the camera view; not mirrored like the video is. */
+.stage__alert {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 8px 14px;
+  background: var(--bad);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.4;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+}
+.stage__alert[hidden] {
+  display: none;
+}
 .stage-note {
   margin: 0 0 12px;
   font-size: 14px;
