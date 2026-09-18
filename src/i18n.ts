@@ -10,7 +10,9 @@ const en = {
   brand: 'Upright',
   tagline: 'Are you sitting up straight?',
   note: 'Posture detection that runs in your browser. No data ever leaves your device.',
-  title: 'Upright',
+  title: 'Upright — Are you sitting up straight?',
+  metaDescription:
+    'Free posture reminder that runs entirely in your browser. Your webcam checks for slouching, leaning in, head tilt and long sitting, and nudges you to sit up straight. No data ever leaves your device.',
   themeToggle: 'Toggle color theme',
   language: 'Language',
   stageAria: 'Camera view',
@@ -106,7 +108,9 @@ const zh: Record<Key, string> = {
   brand: '坐直',
   tagline: '你坐直了吗？',
   note: '运行在本地浏览器里的坐姿检测，无任何数据上传',
-  title: '坐直 — Upright',
+  title: '坐直 Upright — 你坐直了吗？',
+  metaDescription:
+    '运行在本地浏览器里的免费坐姿提醒。摄像头检测驼背、离屏太近、歪头、久坐等问题并及时提醒，无任何数据上传。',
   themeToggle: '切换明暗主题',
   language: '语言',
   stageAria: '摄像头画面',
@@ -239,6 +243,7 @@ export function t(key: Key, vars?: Record<string, string | number>): string {
 export function applyStaticStrings(root: ParentNode = document): void {
   document.documentElement.lang = current === 'zh' ? 'zh-CN' : 'en';
   document.title = t('title');
+  document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', t('metaDescription'));
   for (const el of root.querySelectorAll<HTMLElement>('[data-i18n]')) {
     el.textContent = t(el.dataset.i18n as Key);
   }
