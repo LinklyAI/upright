@@ -15,7 +15,7 @@ pnpm dev
 
 Open the address Vite prints in Chrome. Camera access requires `localhost` or HTTPS.
 
-1. Click **Start camera** and allow camera and notification access. The first run downloads two models (about 10 MB) from Google's model storage; later runs use the browser cache.
+1. Click **Start camera** and allow camera and notification access. The two MediaPipe models (about 9 MB) are served from the site itself, so no third-party host is needed; later runs use the browser cache.
 2. Sit upright and click **Calibrate**, holding still for three seconds. The baseline is stored in `localStorage` and reused on the next visit.
 3. Switch to other tabs, or open the **Floating window** to keep the status panel on top.
 
