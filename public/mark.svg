@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="#4a71ee" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Upright mark: a figure seated in profile with a perfectly vertical spine -->
+  <circle cx="17.5" cy="6.5" r="3.6" fill="#4a71ee" stroke="none"/>
+  <path d="M15.5 12.5V22h9v7"/>
+  <path d="M15.5 22H9M11 22v7"/>
+  <path d="M15.5 15l6 3.5"/>
+</svg>
