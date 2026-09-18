@@ -1,4 +1,4 @@
-import { ISSUE_LABELS } from './config';
+import { getLocale, t, type Key } from './i18n';
 import type { Baseline, FrameMetrics, Issue, IssueState, Sensitivity, Verdict } from './types';
 
 export interface Elements {
@@ -17,6 +17,7 @@ export interface Elements {
   sensitivity: HTMLFieldSetElement;
   sound: HTMLInputElement;
   theme: HTMLButtonElement;
+  language: HTMLSelectElement;
   log: HTMLElement;
   alarmOverlay: HTMLElement;
 }
@@ -44,6 +45,7 @@ export function getElements(): Elements {
     sensitivity: byId('sensitivity'),
     sound: byId('sound'),
     theme: byId('theme'),
+    language: byId('language'),
     log: byId('log'),
     alarmOverlay: byId('alarm-overlay'),
   };
@@ -75,6 +77,16 @@ export function writeSensitivity(fieldset: HTMLFieldSetElement, value: Sensitivi
 const ISSUE_ORDER: Issue[] = ['tooClose', 'headDown', 'headTilt', 'headForward', 'slouch', 'sideLean', 'sitting'];
 
 type Unit = '%' | '°' | '×' | 'min';
+
+const ISSUE_LABEL_KEYS: Record<Issue, Key> = {
+  tooClose: 'issueTooClose',
+  headDown: 'issueHeadDown',
+  headTilt: 'issueHeadTilt',
+  headForward: 'issueHeadForward',
+  slouch: 'issueSlouch',
+  sideLean: 'issueSideLean',
+  sitting: 'issueSitting',
+};
 
 const ISSUE_UNITS: Record<Issue, Unit> = {
   tooClose: '%',
@@ -132,7 +144,7 @@ export function buildGauges(container: HTMLElement): void {
         '<div class="gauge__head"><span class="gauge__name"></span><span class="gauge__value">—</span></div>' +
         '<div class="gauge__bar"><div class="gauge__fill"></div></div>';
       const name = root.querySelector<HTMLElement>('.gauge__name');
-      if (name) name.textContent = ISSUE_LABELS[issue];
+      if (name) name.textContent = t(ISSUE_LABEL_KEYS[issue]);
       return root;
     }),
   );
@@ -169,30 +181,30 @@ export function renderGauges(container: HTMLElement, verdict: Verdict | null): v
 
 export function describeVerdict(verdict: Verdict): string {
   const active = ISSUE_ORDER.filter((issue) => verdict.issues[issue].active).map((issue) =>
-    issue === 'sitting' ? '久坐，起来活动一下' : ISSUE_LABELS[issue],
+    issue === 'sitting' ? t('sittingMessage') : t(ISSUE_LABEL_KEYS[issue]),
   );
-  return active.join('、');
+  return active.join(getLocale() === 'zh' ? '、' : ', ');
 }
 
 // ---------- raw metrics table: rows built once, cells updated in place ----------
 
-const METRIC_ROWS = [
-  '瞳距 (px)',
-  '头部俯仰 (°)',
-  '头部侧倾 (°)',
-  '脸肩比',
-  '鼻肩高度比',
-  '鼻子高度 (px)',
-  '肩线倾斜 (°)',
-  '横向偏移',
-  '连续就座',
-] as const;
+const METRIC_ROW_KEYS: Key[] = [
+  'metricIpd',
+  'metricPitch',
+  'metricRoll',
+  'metricHeadForward',
+  'metricTorso',
+  'metricNoseY',
+  'metricShoulderTilt',
+  'metricLateral',
+  'metricSeated',
+];
 
 export function buildMetricsTable(tbody: HTMLElement): void {
   tbody.replaceChildren(
-    ...METRIC_ROWS.map((name) => {
+    ...METRIC_ROW_KEYS.map((key) => {
       const tr = document.createElement('tr');
-      for (const text of [name, '—', '—', '—']) {
+      for (const text of [t(key), '—', '—', '—']) {
         const td = document.createElement('td');
         td.textContent = text;
         tr.append(td);
@@ -234,6 +246,6 @@ export function renderMetrics(
 }
 
 export function appendLog(el: HTMLElement, message: string): void {
-  const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const time = new Date().toLocaleTimeString(undefined, { hour12: false });
   el.textContent = `${time}  ${message}\n${el.textContent ?? ''}`.split('\n').slice(0, 80).join('\n');
 }

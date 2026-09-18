@@ -1,57 +1,60 @@
-# Posture Guard
+# Upright
 
-纯浏览器本地运行的坐姿监测 Demo：打开网页、授权摄像头、校准 3 秒，之后离屏太近、低头前倾、驼背塌陷时页面渐变红并发出提示音。画面不离开本机，没有服务端。
+**Are you sitting up straight?**
 
-## 运行
+[English](README.md) | [简体中文](README.zh-CN.md)
+
+Posture detection that runs entirely in your browser. Open the page, allow the camera, calibrate for three seconds, and Upright tints the page red and beeps whenever you lean into the screen, drop your head, tilt, slouch, lean to one side, or sit too long. Video never leaves your device and there is no server.
+
+## Run
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-浏览器打开 Vite 给出的地址（需要 Chrome，摄像头权限要求 `localhost` 或 HTTPS）。
+Open the address Vite prints in Chrome. Camera access requires `localhost` or HTTPS.
 
-使用步骤：
+1. Click **Start camera** and allow camera and notification access. The first run downloads two models (about 10 MB) from Google's model storage; later runs use the browser cache.
+2. Sit upright and click **Calibrate**, holding still for three seconds. The baseline is stored in `localStorage` and reused on the next visit.
+3. Switch to other tabs, or open the **Floating window** to keep the status panel on top.
 
-1. 点「启动摄像头」，允许摄像头和通知权限。首次会从 Google 存储下载两个模型（约 10 MB），之后走浏览器缓存。
-2. 端正坐好，点「校准」，保持 3 秒。校准结果存在 localStorage，下次打开自动沿用。
-3. 之后可以切到别的标签页或用「置顶小窗」把状态面板挂在屏幕角落。
+Language, theme, sensitivity, sound and the calibration baseline all persist across reloads.
 
-## 工作原理
+## How it works
 
 ```
-摄像头 → MediaPipe Face Landmarker + Pose Landmarker（WASM/WebGPU，本地）
-      → metrics.ts   提取三个与尺度无关的指标
-      → judge.ts     与校准基线比较 + EMA 平滑 + 迟滞阈值 + 持续时间
-      → alerts.ts    页面变红 / 提示音 / 标签页标题 / 系统通知
+camera → MediaPipe Face Landmarker + Pose Landmarker (WASM/WebGPU, on device)
+       → metrics.ts      scale-free measurements
+       → judge.ts        compare with the calibrated baseline, EMA smoothing, hysteresis, dwell time
+       → alerts.ts       red page wash, beeps, tab title, system notification
 ```
 
-| 问题     | 指标                                                                           | 默认进入 / 退出阈值      |
-| -------- | ------------------------------------------------------------------------------ | ------------------------ |
-| 离屏太近 | 瞳距像素 / 基线瞳距 − 1                                                        | 12% / 6%                 |
-| 低头     | 面部变换矩阵解出的头部俯仰角（度）− 基线                                       | 10° / 5°                 |
-| 歪头     | 两眼连线倾角（度）与基线之差的绝对值                                           | 10° / 5°                 |
-| 头前伸   | (瞳距 / 肩宽) / 基线 − 1，身体不动只有头往前探时升高                           | 12% / 6%                 |
-| 驼背塌陷 | 1 − (鼻—肩中点高度 / 肩宽) / 基线；肩膀不可见时改用鼻子在画面中的下沉量 / 脸高 | 18% / 9%（鼻子备用 40%） |
-| 歪坐     | 肩线倾角偏差（10°）与鼻子偏离肩中点的横向距离（肩宽 20%）取较大者              | 达到阈值 / 一半          |
-| 久坐     | 连续在画面中的时长，离开 2 分钟以上视为起身                                    | 45 分钟                  |
+| Check            | Signal                                                                                                                       | Default enter / exit    |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Too close        | pupil distance in px / baseline − 1                                                                                          | 12% / 6%                |
+| Head down        | head pitch from the facial transformation matrix (degrees) − baseline                                                        | 12° / 6°                |
+| Head tilt        | absolute change in the eye-line angle (degrees)                                                                              | 12° / 6°                |
+| Forward head     | (pupil distance / shoulder width) / baseline − 1; rises when only the head moves forward                                     | 18% / 9%                |
+| Slouching        | 1 − (nose-to-shoulder height / shoulder width) / baseline; falls back to the nose sinking in frame when shoulders are hidden | 18% / 9% (fallback 40%) |
+| Leaning sideways | the larger of shoulder-line tilt (10°) and lateral nose offset (20% of shoulder width)                                       | threshold / half        |
+| Sitting too long | continuous time in frame; leaving for two minutes counts as standing up                                                      | 45 min                  |
 
-- 所有判断都是**相对个人基线**的，因此摄像头俯仰角、偏移、身高、座椅高度都在校准时被抵消。
-- 异常需持续 3 秒才报警，恢复 1.5 秒后自动解除；进入 / 退出阈值不同，避免临界抖动。
-- 肩膀不在画面内时驼背检测暂停，其余两项照常。
-- 人脸离开画面视为「正常」，警报会自动清除。
-- 控制区的**灵敏度**档位会整体缩放阈值并调整进入时间：低 ×1.4 / 4 秒，中 ×1 / 3 秒，高 ×0.6 / 2 秒。久坐不受影响。
-- 阈值与时间常数都在 `src/config.ts`。
+- Every check is **relative to a personal baseline**, so camera angle, offset, height and chair height cancel out during calibration.
+- A problem must persist for three seconds before the alarm fires, and clears after 1.5 seconds of good posture. Enter and exit thresholds differ to avoid flapping at the boundary.
+- The **Sensitivity** control scales all thresholds and the dwell time: low ×1.4 / 4 s, normal ×1 / 3 s, high ×0.6 / 2 s. Sitting time is unaffected.
+- Leaving the frame counts as good posture, so alarms clear when you walk away.
+- Thresholds and time constants live in `src/config.ts`.
 
-## 后台运行
+## Background tabs
 
-Chrome 对正在采集摄像头的标签页不做内存回收和冻结，也豁免「每分钟一次」的强力节流，但仍会把定时器对齐到约 1 Hz。检测循环用 `setInterval` 而非 `requestAnimationFrame`（后者在隐藏标签页里完全停止），后台约 1 fps，对 3 秒判定窗口足够。播放提示音时标签页被视为「有声」，节流会进一步放宽。
+Chrome neither discards nor freezes a tab that is capturing the camera, and exempts it from the once-a-minute intensive throttling, but timers are still aligned to roughly 1 Hz. The detection loop uses `setInterval` rather than `requestAnimationFrame` (which stops entirely in hidden tabs); about 1 fps in the background is enough for a three-second decision window. While a beep is playing the tab counts as audible, which relaxes throttling further.
 
-如需更高的后台帧率，下一步是把 `MediaStreamTrack` 转移到 Web Worker，用 `MediaStreamTrackProcessor` 逐帧推理。
+For higher background frame rates, the next step is transferring the `MediaStreamTrack` to a Web Worker and reading frames with `MediaStreamTrackProcessor`.
 
-## 已知限制与后续方向
+## Known limits
 
-- 头部俯仰的正方向依赖 MediaPipe 矩阵布局假设（列主序、z 朝向观察者）。如果低头时「头部俯仰」偏差为负，把 `src/config.ts` 里的 `HEAD_PITCH_SIGN` 改成 −1。
-- 歪坐和头前伸只有肩膀可见时才工作。
-- 没有接多模态大模型仲裁；本地指标处于临界区较久时抽一帧交给模型判断是一个可选的增强。
-- 只在 Chrome 上验证目标；Document Picture-in-Picture 是 Chrome 专有 API。
+- The sign of head pitch depends on MediaPipe's matrix layout (column-major, z toward the viewer). If the "Head pitch" deviation goes negative when you look down, set `HEAD_PITCH_SIGN` in `src/config.ts` to −1.
+- Leaning and forward-head checks need both shoulders in frame.
+- No multimodal model is involved. Sending a frame to a vision model when a check hovers near its threshold for a long time would be an optional refinement.
+- Only Chrome is targeted; Document Picture-in-Picture is Chrome-specific.

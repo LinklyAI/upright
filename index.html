@@ -1,17 +1,36 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Posture Guard</title>
+    <title>Upright</title>
   </head>
   <body>
     <main class="app">
       <header class="masthead">
-        <div class="brand">Posture Guard<span>本地坐姿监测</span></div>
+        <div class="brand">
+          <span data-i18n="brand">Upright</span>
+          <span class="brand__tagline" data-i18n="tagline"
+            >Are you sitting up straight?</span
+          >
+        </div>
         <nav class="masthead__nav">
-          <span class="masthead__note">画面只在本机处理，不上传</span>
-          <button id="theme" type="button" aria-label="切换明暗主题">
+          <span class="masthead__note" data-i18n="note">
+            Posture detection that runs in your browser. No data ever leaves
+            your device.
+          </span>
+          <label class="language-control">
+            <span class="sr-only" data-i18n="language">Language</span>
+            <select
+              id="language"
+              class="language-select"
+              data-i18n-aria="language"
+            >
+              <option value="en">English</option>
+              <option value="zh">简体中文</option>
+            </select>
+          </label>
+          <button id="theme" type="button" data-i18n-aria="themeToggle">
             <svg
               width="14"
               height="14"
@@ -33,10 +52,12 @@
         </nav>
       </header>
 
-      <section class="stage" aria-label="摄像头画面">
+      <section class="stage" data-i18n-aria="stageAria">
         <video id="video" playsinline muted></video>
         <canvas id="overlay"></canvas>
-        <div id="stage-hint" class="stage__hint">点「启动摄像头」开始</div>
+        <div id="stage-hint" class="stage__hint" data-i18n="stageHint">
+          Click "Start camera" to begin
+        </div>
       </section>
 
       <div class="side">
@@ -48,54 +69,74 @@
               aria-hidden="true"
             ></span>
             <div class="verdict__text">
-              <div id="status" class="verdict__title">未启动</div>
-              <div id="fps" class="verdict__meta">等待摄像头</div>
+              <div id="status" class="verdict__title">Not started</div>
+              <div id="fps" class="verdict__meta">Waiting for camera</div>
             </div>
           </div>
-          <div id="issues" class="gauges" aria-label="各项检测"></div>
+          <div id="issues" class="gauges" data-i18n-aria="checksAria"></div>
         </section>
 
-        <section class="toolbar" aria-label="控制">
+        <section class="toolbar" data-i18n-aria="controlsAria">
           <div class="toolbar__row">
-            <button id="start" type="button" class="btn btn--primary">
-              启动摄像头
+            <button
+              id="start"
+              type="button"
+              class="btn btn--primary"
+              data-i18n="btnStart"
+            >
+              Start camera
             </button>
-            <button id="calibrate" type="button" class="btn" disabled>
-              校准 · 端正坐好 3 秒
+            <button
+              id="calibrate"
+              type="button"
+              class="btn"
+              disabled
+              data-i18n="btnCalibrate"
+            >
+              Calibrate · sit upright for 3 s
             </button>
-            <button id="pip" type="button" class="btn" disabled>
-              置顶小窗
+            <button
+              id="pip"
+              type="button"
+              class="btn"
+              disabled
+              data-i18n="btnPip"
+            >
+              Floating window
             </button>
           </div>
           <div class="toolbar__row toolbar__row--settings">
             <fieldset class="segmented" id="sensitivity">
-              <legend class="label">灵敏度</legend>
+              <legend class="label" data-i18n="sensitivity">Sensitivity</legend>
               <label
                 ><input type="radio" name="sensitivity" value="low" /><span
-                  >低</span
+                  data-i18n="sensitivityLow"
+                  >Low</span
                 ></label
               >
               <label
                 ><input type="radio" name="sensitivity" value="normal" /><span
-                  >中</span
+                  data-i18n="sensitivityNormal"
+                  >Normal</span
                 ></label
               >
               <label
                 ><input type="radio" name="sensitivity" value="high" /><span
-                  >高</span
+                  data-i18n="sensitivityHigh"
+                  >High</span
                 ></label
               >
             </fieldset>
             <label class="switch">
               <input id="sound" type="checkbox" checked />
               <span class="switch__track" aria-hidden="true"></span>
-              <span>声音提醒</span>
+              <span data-i18n="sound">Sound alerts</span>
             </label>
           </div>
         </section>
 
         <details class="details" open>
-          <summary class="label">原始指标</summary>
+          <summary class="label" data-i18n="rawMetrics">Raw metrics</summary>
           <div class="table-wrap">
             <table class="metrics">
               <colgroup>
@@ -106,10 +147,10 @@
               </colgroup>
               <thead>
                 <tr>
-                  <th>指标</th>
-                  <th>当前</th>
-                  <th>基线</th>
-                  <th>偏差</th>
+                  <th data-i18n="thMetric">Metric</th>
+                  <th data-i18n="thCurrent">Current</th>
+                  <th data-i18n="thBaseline">Baseline</th>
+                  <th data-i18n="thDeviation">Deviation</th>
                 </tr>
               </thead>
               <tbody id="metrics"></tbody>
@@ -117,9 +158,14 @@
           </div>
         </details>
 
-        <section class="events" aria-label="事件记录">
-          <div class="label">事件</div>
-          <pre id="log" class="events__log"></pre>
+        <section class="events" data-i18n-aria="eventsAria">
+          <div class="label" data-i18n="events">Events</div>
+          <pre
+            id="log"
+            class="events__log"
+            data-i18n-empty="noEvents"
+            data-empty="No events yet"
+          ></pre>
         </section>
       </div>
     </main>

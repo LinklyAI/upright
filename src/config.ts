@@ -77,15 +77,5 @@ export const SENSITIVITY_PRESETS: Record<Sensitivity, SensitivityPreset> = {
   high: { threshold: 0.6, enterMs: 2000 },
 };
 
-export const ISSUE_LABELS: Record<Issue, string> = {
-  tooClose: '离屏幕太近',
-  headDown: '低头',
-  headTilt: '歪头',
-  headForward: '头前伸',
-  slouch: '驼背塌陷',
-  sideLean: '歪坐',
-  sitting: '久坐',
-};
 
 export const STORAGE_KEY_BASELINE = 'posture-guard.baseline.v2';
-export const STORAGE_KEY_SENSITIVITY = 'posture-guard.sensitivity.v1';

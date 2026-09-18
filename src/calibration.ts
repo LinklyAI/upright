@@ -1,5 +1,5 @@
-import { CALIBRATION_MIN_SAMPLES, STORAGE_KEY_BASELINE, STORAGE_KEY_SENSITIVITY } from './config';
-import type { Baseline, FrameMetrics, Sensitivity, ShoulderMetrics } from './types';
+import { CALIBRATION_MIN_SAMPLES, STORAGE_KEY_BASELINE } from './config';
+import type { Baseline, FrameMetrics, ShoulderMetrics } from './types';
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -97,23 +97,4 @@ function isBaseline(value: unknown): value is Baseline {
     (v.shoulders === null || isShoulderMetrics(v.shoulders)) &&
     isNum(v.createdAt)
   );
-}
-
-const SENSITIVITIES: readonly Sensitivity[] = ['low', 'normal', 'high'];
-
-export function loadSensitivity(): Sensitivity {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_SENSITIVITY);
-    return SENSITIVITIES.find((s) => s === raw) ?? 'normal';
-  } catch {
-    return 'normal';
-  }
-}
-
-export function saveSensitivity(value: Sensitivity): void {
-  try {
-    localStorage.setItem(STORAGE_KEY_SENSITIVITY, value);
-  } catch {
-    // Non-fatal.
-  }
 }

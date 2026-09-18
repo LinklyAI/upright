@@ -22,13 +22,13 @@ export class Landmarkers {
     readonly delegate: Delegate,
   ) {}
 
-  static async load(onStatus: (message: string) => void): Promise<Landmarkers> {
+  static async load(onAttempt: (delegate: Delegate) => void): Promise<Landmarkers> {
     const vision = await FilesetResolver.forVisionTasks(WASM_PATH);
 
     // Prefer GPU; some machines/browsers fail to create the WebGL delegate, so fall back to CPU.
     for (const delegate of ['GPU', 'CPU'] as const) {
       try {
-        onStatus(`正在加载模型（${delegate}）…`);
+        onAttempt(delegate);
         const face = await FaceLandmarker.createFromOptions(vision, {
           baseOptions: { modelAssetPath: MODEL_URLS.face, delegate },
           runningMode: 'VIDEO',

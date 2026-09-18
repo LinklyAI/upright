@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import type { FrameMetrics, Point, Verdict } from './types';
 
 const COLOR_OK = '#3ddc84';
@@ -50,7 +51,7 @@ export class Overlay {
       this.dot(left, shoulderColor);
       this.dot(right, shoulderColor);
     } else {
-      this.note('肩膀不在画面内：驼背改用鼻子高度判断，歪坐 / 头前伸暂停');
+      this.note(t('shouldersHidden'));
     }
   }
 

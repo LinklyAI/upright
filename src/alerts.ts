@@ -1,4 +1,5 @@
 import { BEEP_INTERVAL_MS, NOTIFY_INTERVAL_MS } from './config';
+import { t } from './i18n';
 import type { Verdict } from './types';
 
 /**
@@ -70,7 +71,7 @@ export class Alerter {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     try {
       // Same tag replaces the previous notification instead of stacking them.
-      new Notification('坐姿提醒', { body: message, tag: 'posture-guard', silent: true });
+      new Notification(t('notificationTitle'), { body: message, tag: 'posture-guard', silent: true });
     } catch {
       // Some platforms throw for page-created notifications; ignore.
     }
