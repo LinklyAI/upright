@@ -18,9 +18,7 @@
   --bad: #d64545;
   --bad-soft: #fdecec;
   color-scheme: light;
-  font-family:
-    ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono",
-    monospace;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
   background: var(--bg);
   color: var(--ink);
 }
@@ -276,6 +274,25 @@ input:focus-visible + .switch__track {
 .gauge {
   display: grid;
   gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.gauge:hover .gauge__name {
+  color: var(--accent);
+}
+.gauge--muted .gauge__name,
+.gauge--muted:hover .gauge__name {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.gauge--muted .gauge__fill {
+  background: var(--muted);
+  opacity: 0.4;
 }
 .gauge__head {
   display: flex;
@@ -322,11 +339,7 @@ input:focus-visible + .switch__track {
   color: var(--muted);
 }
 .gauge--unknown .gauge__bar {
-  background: repeating-linear-gradient(
-    90deg,
-    var(--line) 0 4px,
-    transparent 4px 8px
-  );
+  background: repeating-linear-gradient(90deg, var(--line) 0 4px, transparent 4px 8px);
 }
 
 /* ---------- toolbar ---------- */
@@ -434,7 +447,7 @@ input:focus-visible + .switch__track {
   position: relative;
 }
 .switch__track::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 2px;
   left: 2px;
@@ -472,7 +485,7 @@ input:focus-visible + .switch__track {
   display: none;
 }
 .details summary::before {
-  content: "▸";
+  content: '▸';
   font-size: 10px;
   transition: transform 0.15s ease;
 }

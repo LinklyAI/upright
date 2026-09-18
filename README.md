@@ -37,12 +37,13 @@ camera → MediaPipe Face Landmarker + Pose Landmarker (WASM/WebGPU, on device)
 | Head tilt        | absolute change in the eye-line angle (degrees)                                                                              | 12° / 6°                |
 | Forward head     | (pupil distance / shoulder width) / baseline − 1; rises when only the head moves forward                                     | 18% / 9%                |
 | Slouching        | 1 − (nose-to-shoulder height / shoulder width) / baseline; falls back to the nose sinking in frame when shoulders are hidden | 18% / 9% (fallback 40%) |
-| Leaning sideways | the larger of shoulder-line tilt (10°) and lateral nose offset (20% of shoulder width)                                       | threshold / half        |
+| Leaning sideways | the larger of shoulder-line tilt (14°) and lateral nose offset (30% of shoulder width); must persist for 8 s                 | threshold / half        |
 | Sitting too long | continuous time in frame; leaving for two minutes counts as standing up                                                      | 45 min                  |
 
 - Every check is **relative to a personal baseline**, so camera angle, offset, height and chair height cancel out during calibration.
 - A problem must persist for three seconds before the alarm fires, and clears after 1.5 seconds of good posture. Enter and exit thresholds differ to avoid flapping at the boundary.
-- The **Sensitivity** control scales all thresholds and the dwell time: low ×1.4 / 4 s, normal ×1 / 3 s, high ×0.6 / 2 s. Sitting time is unaffected.
+- The **Sensitivity** control scales all thresholds and dwell times: low ×1.4 / ×1.33, normal ×1, high ×0.6 / ×0.67. Sitting time is unaffected.
+- Click any check to turn it off; a muted check keeps measuring but never alarms. The choice is remembered.
 - Leaving the frame counts as good posture, so alarms clear when you walk away.
 - Thresholds and time constants live in `src/config.ts`.
 

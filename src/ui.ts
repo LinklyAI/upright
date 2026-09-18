@@ -134,17 +134,21 @@ function formatGauge(state: IssueState | undefined, unit: Unit): string {
   return `${fmt(Math.max(0, state.value) * scale, digits)} / ${fmt(state.threshold * scale, digits)}${suffix}`;
 }
 
-export function buildGauges(container: HTMLElement): void {
+/** Gauges are buttons: clicking one mutes or unmutes that check. */
+export function buildGauges(container: HTMLElement, onToggle: (issue: Issue) => void): void {
   container.replaceChildren(
     ...ISSUE_ORDER.map((issue) => {
-      const root = document.createElement('div');
+      const root = document.createElement('button');
+      root.type = 'button';
       root.className = 'gauge gauge--unknown';
       root.dataset.issue = issue;
+      root.title = t('gaugeToggleHint');
       root.innerHTML =
         '<div class="gauge__head"><span class="gauge__name"></span><span class="gauge__value">—</span></div>' +
         '<div class="gauge__bar"><div class="gauge__fill"></div></div>';
       const name = root.querySelector<HTMLElement>('.gauge__name');
       if (name) name.textContent = t(ISSUE_LABEL_KEYS[issue]);
+      root.addEventListener('click', () => onToggle(issue));
       return root;
     }),
   );
@@ -158,13 +162,16 @@ function gaugeRefs(container: HTMLElement): GaugeRefs[] {
   });
 }
 
-export function renderGauges(container: HTMLElement, verdict: Verdict | null): void {
+export function renderGauges(container: HTMLElement, verdict: Verdict | null, muted: ReadonlySet<Issue>): void {
   for (const { root, value, fill } of gaugeRefs(container)) {
     const issue = root.dataset.issue as Issue | undefined;
     if (!issue) continue;
     const state = verdict?.issues[issue];
     const unit = ISSUE_UNITS[issue];
-    value.textContent = formatGauge(state, unit);
+    const isMuted = muted.has(issue);
+    value.textContent = isMuted ? t('gaugeMuted') : formatGauge(state, unit);
+    root.classList.toggle('gauge--muted', isMuted);
+    root.setAttribute('aria-pressed', String(!isMuted));
 
     root.classList.remove('gauge--unknown', 'gauge--warn', 'gauge--active');
     if (!state || state.value === null) {
@@ -174,9 +181,14 @@ export function renderGauges(container: HTMLElement, verdict: Verdict | null): v
     }
     const ratio = Math.max(0, Math.min(1, state.value / state.threshold));
     fill.style.width = `${(ratio * 100).toFixed(1)}%`;
+    if (isMuted) continue;
     if (state.active) root.classList.add('gauge--active');
     else if (ratio >= 0.6) root.classList.add('gauge--warn');
   }
+}
+
+export function issueLabel(issue: Issue): string {
+  return t(ISSUE_LABEL_KEYS[issue]);
 }
 
 export function describeVerdict(verdict: Verdict): string {

@@ -71,7 +71,11 @@ export class Alerter {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     try {
       // Same tag replaces the previous notification instead of stacking them.
-      new Notification(t('notificationTitle'), { body: message, tag: 'posture-guard', silent: true });
+      new Notification(t('notificationTitle'), {
+        body: message,
+        tag: 'posture-guard',
+        silent: true,
+      });
     } catch {
       // Some platforms throw for page-created notifications; ignore.
     }

@@ -9,15 +9,23 @@ import { Landmarkers } from './landmarkers';
 import { computeMetrics } from './metrics';
 import { Overlay } from './overlay';
 import { isPipSupported, openPip } from './pip';
-import { loadSensitivity, loadSoundEnabled, saveSensitivity, saveSoundEnabled } from './storage';
+import {
+  loadMutedIssues,
+  loadSensitivity,
+  loadSoundEnabled,
+  saveMutedIssues,
+  saveSensitivity,
+  saveSoundEnabled,
+} from './storage';
 import { initTheme } from './theme';
-import type { Baseline, Sensitivity, Verdict } from './types';
+import type { Baseline, Issue, Sensitivity, Verdict } from './types';
 import {
   appendLog,
   buildGauges,
   buildMetricsTable,
   describeVerdict,
   getElements,
+  issueLabel,
   readSensitivity,
   renderGauges,
   renderMetrics,
@@ -34,6 +42,7 @@ let judge: PostureJudge | null = null;
 let calibrator: Calibrator | null = null;
 let baseline: Baseline | null = loadBaseline();
 let sensitivity: Sensitivity = loadSensitivity();
+const muted: Set<Issue> = loadMutedIssues();
 let lastVerdictAlarm = false;
 let lastTimestamp = 0;
 let frameCount = 0;
@@ -43,7 +52,8 @@ let fpsWindowStart = performance.now();
 function applyLocale(): void {
   applyStaticStrings();
   els.language.value = getLocale();
-  buildGauges(els.issues);
+  buildGauges(els.issues, toggleMuted);
+  renderGauges(els.issues, null, muted);
   buildMetricsTable(els.metrics);
   if (!landmarkers) {
     setVerdict(els, 'idle', t('statusIdle'));
@@ -51,12 +61,34 @@ function applyLocale(): void {
   }
 }
 
+/** Clicking a gauge mutes or unmutes that check; the choice is remembered. */
+function toggleMuted(issue: Issue): void {
+  const nowMuted = !muted.has(issue);
+  if (nowMuted) muted.add(issue);
+  else muted.delete(issue);
+  saveMutedIssues(muted);
+  judge?.setMuted(muted);
+  renderGauges(els.issues, null, muted);
+  appendLog(
+    els.log,
+    t(nowMuted ? 'checkMutedLog' : 'checkUnmutedLog', {
+      name: issueLabel(issue),
+    }),
+  );
+}
+
 initTheme(els.theme);
 applyLocale();
 writeSensitivity(els.sensitivity, sensitivity);
 els.sound.checked = loadSoundEnabled();
 alerter.soundEnabled = els.sound.checked;
-if (baseline) judge = new PostureJudge(baseline, RULES, sensitivity);
+if (baseline) judge = createJudge(baseline);
+
+function createJudge(base: Baseline): PostureJudge {
+  const created = new PostureJudge(base, RULES, sensitivity);
+  created.setMuted(muted);
+  return created;
+}
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -112,7 +144,7 @@ function tick(): void {
 
   const verdict: Verdict | null = judge ? judge.update(metrics, now) : null;
   overlay.draw(metrics, verdict);
-  renderGauges(els.issues, verdict);
+  renderGauges(els.issues, verdict, muted);
   renderMetrics(els.metrics, metrics, baseline, verdict);
 
   if (!verdict) return;
@@ -138,11 +170,14 @@ function finishCalibration(current: Calibrator): void {
   }
   baseline = result;
   saveBaseline(result);
-  judge = new PostureJudge(result, RULES, sensitivity);
+  judge = createJudge(result);
   lastVerdictAlarm = false;
   setVerdict(els, 'ok', t('calibrationDone'));
   const shoulders = result.shoulders
-    ? t('calibrationShoulders', { torso: result.shoulders.torsoRatio.toFixed(2), tilt: result.shoulders.tilt.toFixed(1) })
+    ? t('calibrationShoulders', {
+        torso: result.shoulders.torsoRatio.toFixed(2),
+        tilt: result.shoulders.tilt.toFixed(1),
+      })
     : t('calibrationNoShoulders');
   appendLog(
     els.log,
@@ -189,7 +224,11 @@ els.sensitivity.addEventListener('change', () => {
   sensitivity = value;
   saveSensitivity(value);
   judge?.setSensitivity(value);
-  const level = { low: t('sensitivityLow'), normal: t('sensitivityNormal'), high: t('sensitivityHigh') }[value];
+  const level = {
+    low: t('sensitivityLow'),
+    normal: t('sensitivityNormal'),
+    high: t('sensitivityHigh'),
+  }[value];
   appendLog(els.log, t('sensitivityLog', { level }));
 });
 

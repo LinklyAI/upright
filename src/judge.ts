@@ -38,7 +38,7 @@ class IssueTracker {
 
     const preset = this.preset();
     const scale = preset?.threshold ?? 1;
-    const enterMs = preset?.enterMs ?? this.rule.enterMs;
+    const enterMs = this.rule.enterMs * (preset?.dwell ?? 1);
     const threshold = (this.active ? this.rule.exit : this.rule.enter) * scale;
     const bad = this.smoothed !== null && this.smoothed > threshold;
 
@@ -58,7 +58,12 @@ class IssueTracker {
       }
     }
 
-    return { value: this.smoothed, threshold: this.rule.enter * scale, active: this.active, activeSince: this.activeSince };
+    return {
+      value: this.smoothed,
+      threshold: this.rule.enter * scale,
+      active: this.active,
+      activeSince: this.activeSince,
+    };
   }
 
   private smooth(raw: number | null, now: number): number | null {
@@ -93,6 +98,7 @@ export class PostureJudge {
   private readonly trackers: Record<Issue, IssueTracker>;
   private readonly seated = new SeatedTimer();
   private sensitivity: Sensitivity = 'normal';
+  private muted: ReadonlySet<Issue> = new Set();
 
   constructor(
     private readonly baseline: Baseline,
@@ -101,22 +107,28 @@ export class PostureJudge {
   ) {
     this.sensitivity = sensitivity;
     const preset = (issue: Issue) => () => (UNSCALED_ISSUES.has(issue) ? null : SENSITIVITY_PRESETS[this.sensitivity]);
-    this.trackers = Object.fromEntries(ISSUES.map((issue) => [issue, new IssueTracker(rules[issue], preset(issue))])) as Record<
-      Issue,
-      IssueTracker
-    >;
+    this.trackers = Object.fromEntries(
+      ISSUES.map((issue) => [issue, new IssueTracker(rules[issue], preset(issue))]),
+    ) as Record<Issue, IssueTracker>;
   }
 
   setSensitivity(value: Sensitivity): void {
     this.sensitivity = value;
   }
 
+  /** Muted checks keep measuring (so the gauge stays live) but never raise an alarm. */
+  setMuted(issues: ReadonlySet<Issue>): void {
+    this.muted = issues;
+  }
+
   update(metrics: FrameMetrics | null, now: number): Verdict {
     const deviations = this.deviations(metrics, now);
-    const issues = Object.fromEntries(ISSUES.map((issue) => [issue, this.trackers[issue].update(deviations[issue], now)])) as Record<
-      Issue,
-      IssueState
-    >;
+    const issues = Object.fromEntries(
+      ISSUES.map((issue) => {
+        const state = this.trackers[issue].update(deviations[issue], now);
+        return [issue, this.muted.has(issue) ? { ...state, active: false, activeSince: null } : state];
+      }),
+    ) as Record<Issue, IssueState>;
 
     let severity = 0;
     for (const state of Object.values(issues)) {
@@ -132,7 +144,15 @@ export class PostureJudge {
   private deviations(metrics: FrameMetrics | null, now: number): Record<Issue, number | null> {
     const sitting = this.seated.update(metrics !== null, now);
     if (!metrics) {
-      return { tooClose: null, headDown: null, headTilt: null, headForward: null, slouch: null, sideLean: null, sitting };
+      return {
+        tooClose: null,
+        headDown: null,
+        headTilt: null,
+        headForward: null,
+        slouch: null,
+        sideLean: null,
+        sitting,
+      };
     }
     const b = this.baseline;
     const s = metrics.shoulders;
@@ -147,7 +167,12 @@ export class PostureJudge {
         : (metrics.noseY - b.noseY) / b.faceHeight / SLOUCH_NOSE_DROP;
 
     const sideLean =
-      s && bs ? Math.max(Math.abs(s.tilt - bs.tilt) / SIDE_LEAN_TILT_DEG, Math.abs(s.lateral - bs.lateral) / SIDE_LEAN_LATERAL) : null;
+      s && bs
+        ? Math.max(
+            Math.abs(s.tilt - bs.tilt) / SIDE_LEAN_TILT_DEG,
+            Math.abs(s.lateral - bs.lateral) / SIDE_LEAN_LATERAL,
+          )
+        : null;
 
     return {
       tooClose: metrics.ipd / b.ipd - 1,

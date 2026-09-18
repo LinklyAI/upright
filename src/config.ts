@@ -33,8 +33,8 @@ export const HEAD_PITCH_SIGN = 1;
 /** Component thresholds folded into the composite (normalized) slouch and sideLean scores. */
 export const SLOUCH_TORSO_DROP = 0.18;
 export const SLOUCH_NOSE_DROP = 0.4;
-export const SIDE_LEAN_TILT_DEG = 10;
-export const SIDE_LEAN_LATERAL = 0.2;
+export const SIDE_LEAN_TILT_DEG = 14;
+export const SIDE_LEAN_LATERAL = 0.3;
 
 /** Continuous sitting reminder. */
 export const SITTING_LIMIT_MIN = 45;
@@ -57,8 +57,14 @@ export const RULES: Record<Issue, IssueRule> = {
   headTilt: { enter: 12, exit: 6, enterMs: 3000, exitMs: 1500 },
   headForward: { enter: 0.18, exit: 0.09, enterMs: 3000, exitMs: 1500 },
   slouch: { enter: 1, exit: 0.5, enterMs: 3000, exitMs: 1500 },
-  sideLean: { enter: 1, exit: 0.5, enterMs: 3000, exitMs: 1500 },
-  sitting: { enter: SITTING_LIMIT_MIN, exit: SITTING_LIMIT_MIN, enterMs: 0, exitMs: SITTING_ABSENCE_RESET_MS },
+  // Leaning briefly is normal; only sustained leaning is flagged.
+  sideLean: { enter: 1, exit: 0.5, enterMs: 8000, exitMs: 1500 },
+  sitting: {
+    enter: SITTING_LIMIT_MIN,
+    exit: SITTING_LIMIT_MIN,
+    enterMs: 0,
+    exitMs: SITTING_ABSENCE_RESET_MS,
+  },
 };
 
 /** Issues whose thresholds are not affected by the sensitivity setting. */
@@ -67,15 +73,14 @@ export const UNSCALED_ISSUES: ReadonlySet<Issue> = new Set<Issue>(['sitting']);
 export interface SensitivityPreset {
   /** Multiplied into enter/exit thresholds. */
   threshold: number;
-  /** Replaces enterMs. */
-  enterMs: number;
+  /** Multiplied into enterMs. */
+  dwell: number;
 }
 
 export const SENSITIVITY_PRESETS: Record<Sensitivity, SensitivityPreset> = {
-  low: { threshold: 1.4, enterMs: 4000 },
-  normal: { threshold: 1, enterMs: 3000 },
-  high: { threshold: 0.6, enterMs: 2000 },
+  low: { threshold: 1.4, dwell: 1.33 },
+  normal: { threshold: 1, dwell: 1 },
+  high: { threshold: 0.6, dwell: 0.67 },
 };
-
 
 export const STORAGE_KEY_BASELINE = 'posture-guard.baseline.v2';

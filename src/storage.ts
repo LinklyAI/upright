@@ -1,4 +1,4 @@
-import type { Sensitivity } from './types';
+import type { Issue, Sensitivity } from './types';
 
 /**
  * Small settings persisted in localStorage so a reload keeps the user's choices.
@@ -7,6 +7,7 @@ import type { Sensitivity } from './types';
 const KEYS = {
   sensitivity: 'posture-guard.sensitivity.v1',
   sound: 'posture-guard.sound.v1',
+  muted: 'posture-guard.muted.v1',
 } as const;
 
 function read(key: string): string | null {
@@ -42,4 +43,23 @@ export function loadSoundEnabled(): boolean {
 
 export function saveSoundEnabled(enabled: boolean): void {
   write(KEYS.sound, enabled ? 'on' : 'off');
+}
+
+const ISSUES: readonly Issue[] = ['tooClose', 'headDown', 'headTilt', 'headForward', 'slouch', 'sideLean', 'sitting'];
+
+/** Checks the user switched off by clicking their gauge. */
+export function loadMutedIssues(): Set<Issue> {
+  const raw = read(KEYS.muted);
+  if (!raw) return new Set();
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(ISSUES.filter((issue) => parsed.includes(issue)));
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveMutedIssues(muted: ReadonlySet<Issue>): void {
+  write(KEYS.muted, JSON.stringify([...muted]));
 }

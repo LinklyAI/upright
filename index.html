@@ -10,60 +10,28 @@
     <main class="app">
       <header class="masthead">
         <div class="brand">
-          <svg
-            class="brand__mark"
-            viewBox="0 0 32 32"
-            width="32"
-            height="32"
-            aria-hidden="true"
-            focusable="false"
-          >
+          <svg class="brand__mark" viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" focusable="false">
             <circle cx="17.5" cy="6.5" r="3.6" fill="currentColor" />
-            <g
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
+            <g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
               <path d="M15.5 12.5V22h9v7" />
               <path d="M15.5 22H9M11 22v7" />
               <path d="M15.5 15l6 3.5" />
             </g>
           </svg>
           <span data-i18n="brand">Upright</span>
-          <span class="brand__tagline" data-i18n="tagline"
-            >Are you sitting up straight?</span
-          >
+          <span class="brand__tagline" data-i18n="tagline">Are you sitting up straight?</span>
         </div>
         <nav class="masthead__nav">
           <label class="language-control">
             <span class="sr-only" data-i18n="language">Language</span>
-            <select
-              id="language"
-              class="language-select"
-              data-i18n-aria="language"
-            >
+            <select id="language" class="language-select" data-i18n-aria="language">
               <option value="en">English</option>
               <option value="zh">简体中文</option>
             </select>
           </label>
           <button id="theme" type="button" data-i18n-aria="themeToggle">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <circle
-                cx="8"
-                cy="8"
-                r="6.5"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              />
+            <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5" />
               <path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor" />
             </svg>
           </button>
@@ -72,26 +40,19 @@
 
       <div class="stage-column">
         <p class="stage-note" data-i18n="note">
-          Posture detection that runs in your browser. No data ever leaves your
-          device.
+          Posture detection that runs in your browser. No data ever leaves your device.
         </p>
         <section class="stage" data-i18n-aria="stageAria">
           <video id="video" playsinline muted></video>
           <canvas id="overlay"></canvas>
-          <div id="stage-hint" class="stage__hint" data-i18n="stageHint">
-            Click "Start camera" to begin
-          </div>
+          <div id="stage-hint" class="stage__hint" data-i18n="stageHint">Click "Start camera" to begin</div>
         </section>
       </div>
 
       <div class="side">
         <section id="panel" class="panel">
           <div class="verdict">
-            <span
-              id="verdict-dot"
-              class="verdict__dot verdict__dot--idle"
-              aria-hidden="true"
-            ></span>
+            <span id="verdict-dot" class="verdict__dot verdict__dot--idle" aria-hidden="true"></span>
             <div class="verdict__text">
               <div id="status" class="verdict__title">Not started</div>
               <div id="fps" class="verdict__meta">Waiting for camera</div>
@@ -102,51 +63,25 @@
 
         <section class="toolbar" data-i18n-aria="controlsAria">
           <div class="toolbar__row">
-            <button
-              id="start"
-              type="button"
-              class="btn btn--primary"
-              data-i18n="btnStart"
-            >
-              Start camera
-            </button>
-            <button
-              id="calibrate"
-              type="button"
-              class="btn"
-              disabled
-              data-i18n="btnCalibrate"
-            >
+            <button id="start" type="button" class="btn btn--primary" data-i18n="btnStart">Start camera</button>
+            <button id="calibrate" type="button" class="btn" disabled data-i18n="btnCalibrate">
               Calibrate · sit upright for 3 s
             </button>
-            <button
-              id="pip"
-              type="button"
-              class="btn"
-              disabled
-              data-i18n="btnPip"
-            >
-              Floating window
-            </button>
+            <button id="pip" type="button" class="btn" disabled data-i18n="btnPip">Floating window</button>
           </div>
           <div class="toolbar__row toolbar__row--settings">
             <fieldset class="segmented" id="sensitivity">
               <legend class="label" data-i18n="sensitivity">Sensitivity</legend>
               <label
-                ><input type="radio" name="sensitivity" value="low" /><span
-                  data-i18n="sensitivityLow"
-                  >Low</span
-                ></label
+                ><input type="radio" name="sensitivity" value="low" /><span data-i18n="sensitivityLow">Low</span></label
               >
               <label
-                ><input type="radio" name="sensitivity" value="normal" /><span
-                  data-i18n="sensitivityNormal"
+                ><input type="radio" name="sensitivity" value="normal" /><span data-i18n="sensitivityNormal"
                   >Normal</span
                 ></label
               >
               <label
-                ><input type="radio" name="sensitivity" value="high" /><span
-                  data-i18n="sensitivityHigh"
+                ><input type="radio" name="sensitivity" value="high" /><span data-i18n="sensitivityHigh"
                   >High</span
                 ></label
               >
@@ -184,12 +119,7 @@
 
         <section class="events" data-i18n-aria="eventsAria">
           <div class="label" data-i18n="events">Events</div>
-          <pre
-            id="log"
-            class="events__log"
-            data-i18n-empty="noEvents"
-            data-empty="No events yet"
-          ></pre>
+          <pre id="log" class="events__log" data-i18n-empty="noEvents" data-empty="No events yet"></pre>
         </section>
       </div>
     </main>

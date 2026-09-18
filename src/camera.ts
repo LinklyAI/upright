@@ -4,7 +4,11 @@ export async function openCamera(): Promise<MediaStream> {
     throw new Error('This browser does not support camera access (getUserMedia).');
   }
   return navigator.mediaDevices.getUserMedia({
-    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+    video: {
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+      facingMode: 'user',
+    },
     audio: false,
   });
 }

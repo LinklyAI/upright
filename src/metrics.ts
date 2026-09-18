@@ -4,7 +4,13 @@ import type { RawDetection } from './landmarkers';
 import type { FrameMetrics, Point, ShoulderMetrics } from './types';
 
 // Face Landmarker (478 points): 468-472 left iris, 473-477 right iris.
-const FACE = { forehead: 10, chin: 152, noseTip: 1, leftIris: 468, rightIris: 473 } as const;
+const FACE = {
+  forehead: 10,
+  chin: 152,
+  noseTip: 1,
+  leftIris: 468,
+  rightIris: 473,
+} as const;
 // Pose Landmarker (33 points).
 const POSE = { leftShoulder: 11, rightShoulder: 12 } as const;
 
@@ -48,7 +54,13 @@ function pitchFromMesh(forehead: NormalizedLandmark, chin: NormalizedLandmark, w
   return Math.atan2(dz, dy) * RAD_TO_DEG;
 }
 
-function shoulderMetrics(raw: RawDetection, nose: Point, ipd: number, width: number, height: number): {
+function shoulderMetrics(
+  raw: RawDetection,
+  nose: Point,
+  ipd: number,
+  width: number,
+  height: number,
+): {
   metrics: ShoulderMetrics;
   points: [Point, Point];
 } | null {
@@ -99,7 +111,8 @@ export function computeMetrics(raw: RawDetection, width: number, height: number)
   const rightIrisPx = toPx(rightIris, width, height);
 
   const ipd = dist(leftIrisPx, rightIrisPx);
-  const pitch = pitchFromMatrix(raw.face.facialTransformationMatrixes[0]) ?? pitchFromMesh(forehead, chin, width, height);
+  const pitch =
+    pitchFromMatrix(raw.face.facialTransformationMatrixes[0]) ?? pitchFromMesh(forehead, chin, width, height);
   const shoulders = shoulderMetrics(raw, nosePx, ipd, width, height);
 
   return {
