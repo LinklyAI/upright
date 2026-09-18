@@ -93,28 +93,60 @@ input:focus-visible + .switch__track {
   border-bottom: 1px solid var(--line);
 }
 .brand {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 750;
-  letter-spacing: -0.5px;
+  letter-spacing: -1px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.brand span {
-  font-size: 11px;
+.brand__mark {
+  color: var(--accent);
+  display: block;
+  flex: none;
+}
+.brand__tagline {
+  font-size: 12px;
   font-weight: 450;
   color: var(--muted);
   letter-spacing: 0;
-  margin-left: 6px;
+  margin-left: 8px;
 }
 .masthead__nav {
   display: flex;
   align-items: center;
   gap: 20px;
 }
-.masthead__note {
+.language-control {
+  display: inline-flex;
+  margin: 0;
+}
+.language-select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 32px;
+  padding: 6px 30px 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--ink);
   font-size: 11px;
-  color: var(--muted);
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23737373' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 16px;
+  background-position: right 8px center;
+}
+.language-select:hover {
+  border-color: var(--accent);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 #theme {
   background: none;
@@ -136,9 +168,12 @@ input:focus-visible + .switch__track {
 }
 
 /* ---------- camera ---------- */
-.stage {
+.stage-column {
   position: sticky;
   top: 20px;
+}
+.stage {
+  position: relative;
   aspect-ratio: 4 / 3;
   max-width: 100%;
   background: #000;
@@ -167,6 +202,13 @@ input:focus-visible + .switch__track {
 }
 .stage__hint[hidden] {
   display: none;
+}
+.stage-note {
+  margin: 10px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  text-align: center;
 }
 
 /* ---------- right column ---------- */
@@ -500,7 +542,7 @@ input:focus-visible + .switch__track {
   padding-left: 12px;
 }
 .events__log:empty::before {
-  content: "暂无事件";
+  content: attr(data-empty);
 }
 
 /* Full-screen red wash; opacity is driven by alarm severity. */
@@ -526,13 +568,10 @@ input:focus-visible + .switch__track {
     padding-block: 12px;
     flex-wrap: wrap;
   }
-  .brand span {
+  .brand__tagline {
     display: none;
   }
-  .masthead__note {
-    display: none;
-  }
-  .stage {
+  .stage-column {
     position: static;
   }
   .gauges {
