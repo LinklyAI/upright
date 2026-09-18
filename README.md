@@ -35,7 +35,7 @@ camera → MediaPipe Face Landmarker + Pose Landmarker (WASM/WebGPU, on device)
 | Too close        | pupil distance in px / baseline − 1                                                                                         | 12% / 6%                |
 | Head down        | head pitch from the facial transformation matrix (degrees) − baseline                                                       | 12° / 6°                |
 | Head tilt        | absolute change in the eye-line angle (degrees)                                                                             | 12° / 6°                |
-| Forward head     | (pupil distance / shoulder width) / baseline − 1; rises when only the head moves forward                                    | 18% / 9%                |
+| Forward head     | (pupil distance / shoulder width) / baseline − 1; rises when only the head moves forward                                    | 10% / 5%                |
 | Slouching        | 1 − (ear-to-shoulder height / shoulder width) / baseline; falls back to the nose sinking in frame when shoulders are hidden | 12% / 6% (fallback 40%) |
 | Raised shoulders | shoulders rising in frame while the head stays put, as a fraction of shoulder width; any head movement is deducted          | 8% / 4%                 |
 | Leaning sideways | the larger of shoulder-line tilt (14°) and lateral nose offset (30% of shoulder width); must persist for 8 s                | threshold / half        |

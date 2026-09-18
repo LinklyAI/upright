@@ -65,7 +65,8 @@ export const RULES: Record<Issue, IssueRule> = {
   tooClose: { enter: 0.12, exit: 0.06, enterMs: 3000, exitMs: 1500 },
   headDown: { enter: 12, exit: 6, enterMs: 3000, exitMs: 1500 },
   headTilt: { enter: 12, exit: 6, enterMs: 3000, exitMs: 1500 },
-  headForward: { enter: 0.18, exit: 0.09, enterMs: 3000, exitMs: 1500 },
+  // Forward head posture moves the head 5-10 cm closer at a 60 cm screen: about a 10-15% rise.
+  headForward: { enter: 0.1, exit: 0.05, enterMs: 3000, exitMs: 1500 },
   slouch: { enter: 1, exit: 0.5, enterMs: 3000, exitMs: 1500 },
   // A real shrug lifts the shoulders 3-5 cm, about 8-12% of shoulder width.
   shrug: { enter: 0.08, exit: 0.04, enterMs: 3000, exitMs: 1500 },
