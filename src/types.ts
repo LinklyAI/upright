@@ -1,5 +1,5 @@
 /** Posture problems the demo can flag. */
-export type Issue = 'tooClose' | 'headDown' | 'slouch';
+export type Issue = 'tooClose' | 'headDown' | 'headTilt' | 'headForward' | 'slouch' | 'sideLean' | 'sitting';
 
 /** Hysteresis + dwell-time rule for one issue. Deviation units differ per issue (see config.ts). */
 export interface IssueRule {
@@ -13,19 +13,40 @@ export interface IssueRule {
   exitMs: number;
 }
 
+export type Sensitivity = 'low' | 'normal' | 'high';
+
 export interface Point {
   x: number;
   y: number;
+}
+
+/** Shoulder-based measurements; only available when both shoulders are in frame. */
+export interface ShoulderMetrics {
+  /** Shoulder width in pixels. */
+  width: number;
+  /** Shoulder line angle in degrees; 0 = level. */
+  tilt: number;
+  /** (shoulderMidY - noseY) / width. Shrinks when the head sinks toward the shoulders. */
+  torsoRatio: number;
+  /** (noseX - shoulderMidX) / width. Grows when the upper body leans to one side. */
+  lateral: number;
+  /** ipd / width. Grows when only the head moves toward the screen (forward head posture). */
+  headForward: number;
 }
 
 /** Scale-free posture measurements extracted from one video frame. */
 export interface FrameMetrics {
   /** Inter-pupillary distance in pixels. Grows as the user moves closer. */
   ipd: number;
-  /** Head pitch proxy in degrees. Positive = forehead closer to camera than chin (looking down). */
+  /** Head pitch in degrees. Positive = looking down. */
   pitch: number;
-  /** (shoulderMidY - noseY) / shoulderWidth. Shrinks when the head sinks toward the shoulders. null if shoulders not visible. */
-  torsoRatio: number | null;
+  /** Head roll in degrees from the eye line; 0 = level. */
+  roll: number;
+  /** Nose tip y in pixels; used as a slouch fallback when shoulders are hidden. */
+  noseY: number;
+  /** Forehead-to-chin distance in pixels; normalizes noseY drops. */
+  faceHeight: number;
+  shoulders: ShoulderMetrics | null;
   /** Pixel-space key points for the overlay. */
   points: {
     leftIris: Point;
@@ -40,7 +61,10 @@ export interface FrameMetrics {
 export interface Baseline {
   ipd: number;
   pitch: number;
-  torsoRatio: number | null;
+  roll: number;
+  noseY: number;
+  faceHeight: number;
+  shoulders: ShoulderMetrics | null;
   createdAt: number;
 }
 

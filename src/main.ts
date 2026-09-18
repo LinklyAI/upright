@@ -1,6 +1,6 @@
 import './style.css';
 import { Alerter } from './alerts';
-import { Calibrator, loadBaseline, saveBaseline } from './calibration';
+import { Calibrator, loadBaseline, loadSensitivity, saveBaseline, saveSensitivity } from './calibration';
 import { openCamera, requestWakeLock } from './camera';
 import { CALIBRATION_MS, RULES, TICK_MS } from './config';
 import { PostureJudge } from './judge';
@@ -8,7 +8,7 @@ import { Landmarkers } from './landmarkers';
 import { computeMetrics } from './metrics';
 import { Overlay } from './overlay';
 import { isPipSupported, openPip } from './pip';
-import type { Baseline, Verdict } from './types';
+import type { Baseline, Sensitivity, Verdict } from './types';
 import { appendLog, describeVerdict, getElements, renderIssues, renderMetrics } from './ui';
 
 const els = getElements();
@@ -19,12 +19,14 @@ let landmarkers: Landmarkers | null = null;
 let judge: PostureJudge | null = null;
 let calibrator: Calibrator | null = null;
 let baseline: Baseline | null = loadBaseline();
+let sensitivity: Sensitivity = loadSensitivity();
 let lastVerdictAlarm = false;
 let lastTimestamp = 0;
 let frameCount = 0;
 let fpsWindowStart = performance.now();
 
-if (baseline) judge = new PostureJudge(baseline, RULES);
+els.sensitivity.value = sensitivity;
+if (baseline) judge = new PostureJudge(baseline, RULES, sensitivity);
 
 function setStatus(message: string): void {
   els.status.textContent = message;
@@ -108,14 +110,15 @@ function finishCalibration(current: Calibrator): void {
   }
   baseline = result;
   saveBaseline(result);
-  judge = new PostureJudge(result, RULES);
+  judge = new PostureJudge(result, RULES, sensitivity);
   lastVerdictAlarm = false;
   setStatus('校准完成');
+  const shoulders = result.shoulders
+    ? `鼻肩比 ${result.shoulders.torsoRatio.toFixed(2)}，肩线 ${result.shoulders.tilt.toFixed(1)}°`
+    : '肩膀不在画面内（驼背改用鼻子高度，歪坐 / 头前伸不可用）';
   appendLog(
     els.log,
-    `校准完成：瞳距 ${result.ipd.toFixed(1)}px，俯仰 ${result.pitch.toFixed(1)}°，鼻肩比 ${
-      result.torsoRatio === null ? '不可用（肩膀不在画面内）' : result.torsoRatio.toFixed(2)
-    }`,
+    `校准完成：瞳距 ${result.ipd.toFixed(1)}px，俯仰 ${result.pitch.toFixed(1)}°，侧倾 ${result.roll.toFixed(1)}°，${shoulders}`,
   );
 }
 
@@ -144,6 +147,15 @@ els.pip.addEventListener('click', () => {
     appendLog(els.log, `置顶小窗失败：${errorMessage(error)}`);
     els.pip.disabled = false;
   });
+});
+
+els.sensitivity.addEventListener('change', () => {
+  const value = els.sensitivity.value;
+  if (value !== 'low' && value !== 'normal' && value !== 'high') return;
+  sensitivity = value;
+  saveSensitivity(value);
+  judge?.setSensitivity(value);
+  appendLog(els.log, `灵敏度切换为：${els.sensitivity.selectedOptions[0]?.textContent ?? value}`);
 });
 
 els.sound.addEventListener('change', () => {

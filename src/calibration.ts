@@ -1,5 +1,5 @@
-import { CALIBRATION_MIN_SAMPLES, STORAGE_KEY } from './config';
-import type { Baseline, FrameMetrics } from './types';
+import { CALIBRATION_MIN_SAMPLES, STORAGE_KEY_BASELINE, STORAGE_KEY_SENSITIVITY } from './config';
+import type { Baseline, FrameMetrics, Sensitivity, ShoulderMetrics } from './types';
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -34,13 +34,25 @@ export class Calibrator {
   /** Median is used so a blink or a brief head turn does not skew the baseline. */
   finish(): Baseline | null {
     if (this.samples.length < CALIBRATION_MIN_SAMPLES) return null;
-    const torsoSamples = this.samples.flatMap((s) => (s.torsoRatio === null ? [] : [s.torsoRatio]));
-    // Only trust the shoulder signal if it was visible for most of the window.
-    const torsoRatio = torsoSamples.length >= this.samples.length / 2 ? median(torsoSamples) : null;
+    const withShoulders = this.samples.flatMap((s) => (s.shoulders ? [s.shoulders] : []));
+    // Only trust the shoulder signals if they were visible for most of the window.
+    const shoulders: ShoulderMetrics | null =
+      withShoulders.length >= this.samples.length / 2
+        ? {
+            width: median(withShoulders.map((s) => s.width)),
+            tilt: median(withShoulders.map((s) => s.tilt)),
+            torsoRatio: median(withShoulders.map((s) => s.torsoRatio)),
+            lateral: median(withShoulders.map((s) => s.lateral)),
+            headForward: median(withShoulders.map((s) => s.headForward)),
+          }
+        : null;
     return {
       ipd: median(this.samples.map((s) => s.ipd)),
       pitch: median(this.samples.map((s) => s.pitch)),
-      torsoRatio,
+      roll: median(this.samples.map((s) => s.roll)),
+      noseY: median(this.samples.map((s) => s.noseY)),
+      faceHeight: median(this.samples.map((s) => s.faceHeight)),
+      shoulders,
       createdAt: Date.now(),
     };
   }
@@ -48,7 +60,7 @@ export class Calibrator {
 
 export function saveBaseline(baseline: Baseline): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(baseline));
+    localStorage.setItem(STORAGE_KEY_BASELINE, JSON.stringify(baseline));
   } catch {
     // Storage may be unavailable (private mode); the session still works without persistence.
   }
@@ -56,23 +68,52 @@ export function saveBaseline(baseline: Baseline): void {
 
 export function loadBaseline(): Baseline | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY_BASELINE);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
-    if (!isBaseline(parsed)) return null;
-    return parsed;
+    return isBaseline(parsed) ? parsed : null;
   } catch {
     return null;
   }
+}
+
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+function isShoulderMetrics(value: unknown): value is ShoulderMetrics {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return isNum(v.width) && isNum(v.tilt) && isNum(v.torsoRatio) && isNum(v.lateral) && isNum(v.headForward);
 }
 
 function isBaseline(value: unknown): value is Baseline {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
-    typeof v.ipd === 'number' &&
-    typeof v.pitch === 'number' &&
-    (typeof v.torsoRatio === 'number' || v.torsoRatio === null) &&
-    typeof v.createdAt === 'number'
+    isNum(v.ipd) &&
+    isNum(v.pitch) &&
+    isNum(v.roll) &&
+    isNum(v.noseY) &&
+    isNum(v.faceHeight) &&
+    (v.shoulders === null || isShoulderMetrics(v.shoulders)) &&
+    isNum(v.createdAt)
   );
+}
+
+const SENSITIVITIES: readonly Sensitivity[] = ['low', 'normal', 'high'];
+
+export function loadSensitivity(): Sensitivity {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SENSITIVITY);
+    return SENSITIVITIES.find((s) => s === raw) ?? 'normal';
+  } catch {
+    return 'normal';
+  }
+}
+
+export function saveSensitivity(value: Sensitivity): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_SENSITIVITY, value);
+  } catch {
+    // Non-fatal.
+  }
 }

@@ -1,5 +1,5 @@
 import { ISSUE_LABELS } from './config';
-import type { Baseline, FrameMetrics, Issue, Verdict } from './types';
+import type { Baseline, FrameMetrics, Issue, IssueState, Verdict } from './types';
 
 export interface Elements {
   video: HTMLVideoElement;
@@ -12,6 +12,7 @@ export interface Elements {
   start: HTMLButtonElement;
   calibrate: HTMLButtonElement;
   pip: HTMLButtonElement;
+  sensitivity: HTMLSelectElement;
   sound: HTMLInputElement;
   log: HTMLElement;
   alarmOverlay: HTMLElement;
@@ -35,16 +36,19 @@ export function getElements(): Elements {
     start: byId('start'),
     calibrate: byId('calibrate'),
     pip: byId('pip'),
+    sensitivity: byId('sensitivity'),
     sound: byId('sound'),
     log: byId('log'),
     alarmOverlay: byId('alarm-overlay'),
   };
 }
 
-const ISSUE_ORDER: Issue[] = ['tooClose', 'headDown', 'slouch'];
+const ISSUE_ORDER: Issue[] = ['tooClose', 'headDown', 'headTilt', 'headForward', 'slouch', 'sideLean', 'sitting'];
 
 export function describeVerdict(verdict: Verdict): string {
-  const active = ISSUE_ORDER.filter((issue) => verdict.issues[issue].active).map((issue) => ISSUE_LABELS[issue]);
+  const active = ISSUE_ORDER.filter((issue) => verdict.issues[issue].active).map((issue) =>
+    issue === 'sitting' ? '久坐，起来活动一下' : ISSUE_LABELS[issue],
+  );
   return active.join('、');
 }
 
@@ -65,31 +69,45 @@ export function renderIssues(el: HTMLElement, verdict: Verdict | null): void {
 const fmt = (value: number | null | undefined, digits: number): string =>
   value === null || value === undefined || Number.isNaN(value) ? '—' : value.toFixed(digits);
 
+/** Formats a tracker's smoothed deviation with the unit that issue uses. */
+function deviation(state: IssueState | undefined, unit: '%' | '°' | '×' | 'min'): string {
+  if (!state || state.value === null) return '—';
+  switch (unit) {
+    case '%':
+      return `${fmt(state.value * 100, 0)}%`;
+    case '°':
+      return `${fmt(state.value, 1)}°`;
+    case '×':
+      return `${fmt(state.value, 2)}×`;
+    case 'min':
+      return `${fmt(state.value, 0)} min`;
+  }
+}
+
 export function renderMetrics(
   el: HTMLElement,
   metrics: FrameMetrics | null,
   baseline: Baseline | null,
   verdict: Verdict | null,
 ): void {
+  const s = metrics?.shoulders;
+  const bs = baseline?.shoulders;
+  const v = verdict?.issues;
   const rows: Array<[string, string, string, string]> = [
-    [
-      '瞳距 (px)',
-      fmt(metrics?.ipd, 1),
-      fmt(baseline?.ipd, 1),
-      verdict ? `${fmt((verdict.issues.tooClose.value ?? 0) * 100, 0)}%` : '—',
-    ],
-    ['头部俯仰 (°)', fmt(metrics?.pitch, 1), fmt(baseline?.pitch, 1), verdict ? `${fmt(verdict.issues.headDown.value, 1)}°` : '—'],
-    [
-      '鼻肩高度比',
-      fmt(metrics?.torsoRatio, 2),
-      fmt(baseline?.torsoRatio, 2),
-      verdict && verdict.issues.slouch.value !== null ? `${fmt(verdict.issues.slouch.value * 100, 0)}%` : '—',
-    ],
+    ['瞳距 (px)', fmt(metrics?.ipd, 1), fmt(baseline?.ipd, 1), deviation(v?.tooClose, '%')],
+    ['头部俯仰 (°)', fmt(metrics?.pitch, 1), fmt(baseline?.pitch, 1), deviation(v?.headDown, '°')],
+    ['头部侧倾 (°)', fmt(metrics?.roll, 1), fmt(baseline?.roll, 1), deviation(v?.headTilt, '°')],
+    ['脸肩比', fmt(s?.headForward, 3), fmt(bs?.headForward, 3), deviation(v?.headForward, '%')],
+    ['鼻肩高度比', fmt(s?.torsoRatio, 2), fmt(bs?.torsoRatio, 2), deviation(v?.slouch, '×')],
+    ['鼻子高度 (px)', fmt(metrics?.noseY, 0), fmt(baseline?.noseY, 0), s ? '—' : deviation(v?.slouch, '×')],
+    ['肩线倾斜 (°)', fmt(s?.tilt, 1), fmt(bs?.tilt, 1), deviation(v?.sideLean, '×')],
+    ['横向偏移', fmt(s?.lateral, 2), fmt(bs?.lateral, 2), '—'],
+    ['连续就座', deviation(v?.sitting, 'min'), '—', '—'],
   ];
   el.replaceChildren(
-    ...rows.map(([name, current, base, deviation]) => {
+    ...rows.map(([name, current, base, dev]) => {
       const tr = document.createElement('tr');
-      for (const text of [name, current, base, deviation]) {
+      for (const text of [name, current, base, dev]) {
         const td = document.createElement('td');
         td.textContent = text;
         tr.append(td);
@@ -101,5 +119,5 @@ export function renderMetrics(
 
 export function appendLog(el: HTMLElement, message: string): void {
   const time = new Date().toLocaleTimeString();
-  el.textContent = `${time}  ${message}\n${el.textContent ?? ''}`.split('\n').slice(0, 50).join('\n');
+  el.textContent = `${time}  ${message}\n${el.textContent ?? ''}`.split('\n').slice(0, 80).join('\n');
 }

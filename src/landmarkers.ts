@@ -33,6 +33,7 @@ export class Landmarkers {
           baseOptions: { modelAssetPath: MODEL_URLS.face, delegate },
           runningMode: 'VIDEO',
           numFaces: 1,
+          outputFacialTransformationMatrixes: true,
         });
         const pose = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: { modelAssetPath: MODEL_URLS.pose, delegate },

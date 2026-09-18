@@ -1,5 +1,18 @@
-import { SEVERITY_RAMP_MS, SMOOTHING_TAU_MS } from './config';
-import type { Baseline, FrameMetrics, Issue, IssueRule, IssueState, Verdict } from './types';
+import {
+  SENSITIVITY_PRESETS,
+  SEVERITY_RAMP_MS,
+  SIDE_LEAN_LATERAL,
+  SIDE_LEAN_TILT_DEG,
+  SITTING_ABSENCE_RESET_MS,
+  SLOUCH_NOSE_DROP,
+  SLOUCH_TORSO_DROP,
+  SMOOTHING_TAU_MS,
+  UNSCALED_ISSUES,
+  type SensitivityPreset,
+} from './config';
+import type { Baseline, FrameMetrics, Issue, IssueRule, IssueState, Sensitivity, Verdict } from './types';
+
+const ISSUES: readonly Issue[] = ['tooClose', 'headDown', 'headTilt', 'headForward', 'slouch', 'sideLean', 'sitting'];
 
 /**
  * State machine for one issue: EMA smoothing, hysteresis thresholds and dwell times.
@@ -13,19 +26,26 @@ class IssueTracker {
   private active = false;
   private activeSince: number | null = null;
 
-  constructor(private readonly rule: IssueRule) {}
+  constructor(
+    private readonly rule: IssueRule,
+    /** Returns the current sensitivity preset; null means the rule is used as-is. */
+    private readonly preset: () => SensitivityPreset | null,
+  ) {}
 
   update(raw: number | null, now: number): IssueState {
     this.smoothed = this.smooth(raw, now);
     this.lastAt = now;
 
-    const threshold = this.active ? this.rule.exit : this.rule.enter;
+    const preset = this.preset();
+    const scale = preset?.threshold ?? 1;
+    const enterMs = preset?.enterMs ?? this.rule.enterMs;
+    const threshold = (this.active ? this.rule.exit : this.rule.enter) * scale;
     const bad = this.smoothed !== null && this.smoothed > threshold;
 
     if (bad) {
       this.goodSince = null;
       this.badSince ??= now;
-      if (!this.active && now - this.badSince >= this.rule.enterMs) {
+      if (!this.active && now - this.badSince >= enterMs) {
         this.active = true;
         this.activeSince = now;
       }
@@ -50,27 +70,53 @@ class IssueTracker {
   }
 }
 
+/** Tracks how long the user has been continuously in frame; short gaps do not reset it. */
+class SeatedTimer {
+  private seatedSince: number | null = null;
+  private lastPresentAt: number | null = null;
+
+  /** Returns minutes seated, or null when the user is away. */
+  update(present: boolean, now: number): number | null {
+    if (present) {
+      this.seatedSince ??= now;
+      this.lastPresentAt = now;
+      return (now - this.seatedSince) / 60000;
+    }
+    if (this.lastPresentAt !== null && now - this.lastPresentAt >= SITTING_ABSENCE_RESET_MS) {
+      this.seatedSince = null;
+    }
+    return null;
+  }
+}
+
 export class PostureJudge {
   private readonly trackers: Record<Issue, IssueTracker>;
+  private readonly seated = new SeatedTimer();
+  private sensitivity: Sensitivity = 'normal';
 
   constructor(
     private readonly baseline: Baseline,
     rules: Record<Issue, IssueRule>,
+    sensitivity: Sensitivity,
   ) {
-    this.trackers = {
-      tooClose: new IssueTracker(rules.tooClose),
-      headDown: new IssueTracker(rules.headDown),
-      slouch: new IssueTracker(rules.slouch),
-    };
+    this.sensitivity = sensitivity;
+    const preset = (issue: Issue) => () => (UNSCALED_ISSUES.has(issue) ? null : SENSITIVITY_PRESETS[this.sensitivity]);
+    this.trackers = Object.fromEntries(ISSUES.map((issue) => [issue, new IssueTracker(rules[issue], preset(issue))])) as Record<
+      Issue,
+      IssueTracker
+    >;
+  }
+
+  setSensitivity(value: Sensitivity): void {
+    this.sensitivity = value;
   }
 
   update(metrics: FrameMetrics | null, now: number): Verdict {
-    const deviations = this.deviations(metrics);
-    const issues: Record<Issue, IssueState> = {
-      tooClose: this.trackers.tooClose.update(deviations.tooClose, now),
-      headDown: this.trackers.headDown.update(deviations.headDown, now),
-      slouch: this.trackers.slouch.update(deviations.slouch, now),
-    };
+    const deviations = this.deviations(metrics, now);
+    const issues = Object.fromEntries(ISSUES.map((issue) => [issue, this.trackers[issue].update(deviations[issue], now)])) as Record<
+      Issue,
+      IssueState
+    >;
 
     let severity = 0;
     for (const state of Object.values(issues)) {
@@ -83,15 +129,34 @@ export class PostureJudge {
   }
 
   /** Signed deviations from baseline; positive means "worse". See config.ts for units. */
-  private deviations(metrics: FrameMetrics | null): Record<Issue, number | null> {
-    if (!metrics) return { tooClose: null, headDown: null, slouch: null };
-    const { baseline } = this;
+  private deviations(metrics: FrameMetrics | null, now: number): Record<Issue, number | null> {
+    const sitting = this.seated.update(metrics !== null, now);
+    if (!metrics) {
+      return { tooClose: null, headDown: null, headTilt: null, headForward: null, slouch: null, sideLean: null, sitting };
+    }
+    const b = this.baseline;
+    const s = metrics.shoulders;
+    const bs = b.shoulders;
+
+    // Shoulder-based slouch when available; otherwise fall back to the nose sinking in frame.
+    // The fallback is not used alongside shoulders because moving closer also lowers the face
+    // when the camera sits above eye level.
     const slouch =
-      baseline.torsoRatio !== null && metrics.torsoRatio !== null ? 1 - metrics.torsoRatio / baseline.torsoRatio : null;
+      s && bs
+        ? (1 - s.torsoRatio / bs.torsoRatio) / SLOUCH_TORSO_DROP
+        : (metrics.noseY - b.noseY) / b.faceHeight / SLOUCH_NOSE_DROP;
+
+    const sideLean =
+      s && bs ? Math.max(Math.abs(s.tilt - bs.tilt) / SIDE_LEAN_TILT_DEG, Math.abs(s.lateral - bs.lateral) / SIDE_LEAN_LATERAL) : null;
+
     return {
-      tooClose: metrics.ipd / baseline.ipd - 1,
-      headDown: metrics.pitch - baseline.pitch,
+      tooClose: metrics.ipd / b.ipd - 1,
+      headDown: metrics.pitch - b.pitch,
+      headTilt: Math.abs(metrics.roll - b.roll),
+      headForward: s && bs ? s.headForward / bs.headForward - 1 : null,
       slouch,
+      sideLean,
+      sitting,
     };
   }
 }
