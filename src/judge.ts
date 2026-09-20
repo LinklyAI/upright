@@ -16,6 +16,7 @@ import {
   UNSMOOTHED_ISSUES,
   type SensitivityPreset,
 } from './config';
+import { computeSignals } from './signals';
 import type { Baseline, FrameMetrics, Issue, IssueRule, IssueState, Sensitivity, Verdict } from './types';
 
 const ISSUES: readonly Issue[] = [
@@ -243,42 +244,31 @@ export class PostureJudge {
         lookAway,
       };
     }
-    const b = this.baseline;
-    const s = metrics.shoulders;
-    // Shoulder-relative checks only make sense when the head reference matches the baseline's.
-    const bs = s && b.shoulders && s.usesEars === b.shoulders.usesEars ? b.shoulders : null;
+    const sig = computeSignals(metrics, this.baseline);
+    const sh = sig.shoulders;
 
     let slouch: number;
     let shrug: number | null = null;
-    if (s && bs) {
-      // Positions relative to calibration, in units of the calibrated shoulder width.
-      const shoulderRise = (bs.midY - s.midY) / bs.width;
-      const headRise = (bs.headY - s.headY) / bs.width;
+    if (sh) {
       // Shoulders coming up while the head stays put. Any head movement (whole body rising, or
       // the head dropping in a slouch) is deducted, so only a true shrug scores.
-      shrug = shoulderRise - Math.abs(headRise);
+      shrug = sh.shoulderRise - Math.abs(sh.headRise);
       // Head-to-shoulder distance shrinking. Hunching also rolls the shoulders up in frame, so
       // no shrug component is subtracted here; that would hide a real slouch.
-      slouch = (1 - s.torsoRatio / bs.torsoRatio) / SLOUCH_TORSO_DROP;
+      slouch = sh.torsoDrop / SLOUCH_TORSO_DROP;
     } else {
       // Fall back to the nose sinking in frame. Not used alongside shoulders because moving
       // closer also lowers the face when the camera sits above eye level.
-      slouch = (metrics.noseY - b.noseY) / b.faceHeight / SLOUCH_NOSE_DROP;
+      slouch = sig.noseDrop / SLOUCH_NOSE_DROP;
     }
 
-    const sideLean =
-      s && bs
-        ? Math.max(
-            Math.abs(s.tilt - bs.tilt) / SIDE_LEAN_TILT_DEG,
-            Math.abs(s.lateral - bs.lateral) / SIDE_LEAN_LATERAL,
-          )
-        : null;
+    const sideLean = sh ? Math.max(sh.tiltDelta / SIDE_LEAN_TILT_DEG, sh.lateralDelta / SIDE_LEAN_LATERAL) : null;
 
     return {
-      tooClose: metrics.ipd / b.ipd - 1,
-      headDown: metrics.pitch - b.pitch,
-      headTilt: Math.abs(metrics.roll - b.roll),
-      headForward: s && bs ? s.headForward / bs.headForward - 1 : null,
+      tooClose: sig.closer,
+      headDown: sig.pitchDown,
+      headTilt: sig.rollDelta,
+      headForward: sh ? sh.headForward : null,
       slouch,
       shrug,
       sideLean,
