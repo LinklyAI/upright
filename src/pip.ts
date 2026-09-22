@@ -24,6 +24,8 @@ export async function openPip(panel: HTMLElement, onClose: () => void): Promise<
   const pipWindow = await api.requestWindow({ width: 360, height: 260 });
   copyStyles(pipWindow);
   pipWindow.document.body.style.margin = '8px';
+  // Lets the stylesheet lay the panel out for the small window (rings instead of bars).
+  pipWindow.document.body.classList.add('pip');
 
   const placeholder = document.createComment('pip-placeholder');
   panel.replaceWith(placeholder);

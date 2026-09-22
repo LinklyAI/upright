@@ -370,7 +370,7 @@ input:focus-visible + .switch__track {
 }
 .gauge__fill {
   height: 100%;
-  width: 0;
+  width: calc(var(--ratio, 0) * 100%);
   background: var(--accent);
   transition:
     width 0.25s ease,
@@ -394,6 +394,95 @@ input:focus-visible + .switch__track {
 }
 .gauge--unknown .gauge__bar {
   background: repeating-linear-gradient(90deg, var(--line) 0 4px, transparent 4px 8px);
+}
+
+/* ---------- PiP window: ten rings in two rows so the panel fits without scrolling ---------- */
+.gauge__ring {
+  display: none;
+}
+.pip .panel {
+  gap: 14px;
+}
+.pip .verdict {
+  padding-bottom: 12px;
+}
+.pip .gauges {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px 6px;
+}
+.pip .gauge {
+  justify-items: center;
+  gap: 4px;
+}
+.pip .gauge__bar,
+.pip .gauge__value {
+  display: none;
+}
+.pip .gauge__head {
+  display: block;
+  text-align: center;
+}
+/* Block so the label's line boxes use its own 10px metrics, not the head's */
+.pip .gauge__name {
+  display: block;
+  font-size: 10px;
+  line-height: 1.2;
+}
+/* Ring first, label under it; the value sits in the middle of the ring */
+.pip .gauge__ring {
+  order: -1;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+}
+.pip .gauge__ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.gauge__ring circle {
+  fill: none;
+  stroke-width: 3;
+}
+.gauge__ring-track {
+  stroke: var(--line);
+}
+/* pathLength="100" makes 100 user units one full turn, so the offset is just the percentage left */
+.gauge__ring-fill {
+  stroke: var(--accent);
+  stroke-dasharray: 100px;
+  stroke-dashoffset: calc(100px - var(--ratio, 0) * 100px);
+  transition:
+    stroke-dashoffset 0.25s ease,
+    stroke 0.25s ease;
+}
+.pip .gauge__ring-value {
+  position: relative;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.gauge--warn .gauge__ring-fill {
+  stroke: var(--warn);
+}
+.gauge--active .gauge__ring-fill {
+  stroke: var(--bad);
+}
+.gauge--active .gauge__ring-value {
+  color: var(--bad);
+}
+.gauge--muted .gauge__ring-fill {
+  stroke: var(--muted);
+  opacity: 0.4;
+}
+.gauge--muted .gauge__ring-value {
+  color: var(--muted);
+}
+.gauge--unknown .gauge__ring-track {
+  stroke-dasharray: 2px 2px;
 }
 
 /* ---------- toolbar ---------- */
@@ -655,6 +744,7 @@ input:focus-visible + .switch__track {
 
 @media (prefers-reduced-motion: reduce) {
   .gauge__fill,
+  .gauge__ring-fill,
   .switch__track::after,
   .alarm-overlay,
   .details summary::before {
