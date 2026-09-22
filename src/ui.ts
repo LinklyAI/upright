@@ -16,7 +16,7 @@ export interface Elements {
   calibrate: HTMLButtonElement;
   pip: HTMLButtonElement;
   sensitivity: HTMLFieldSetElement;
-  sound: HTMLInputElement;
+  sound: HTMLFieldSetElement;
   /** One toolbar switch per check, keyed by issue; unchecked = muted. */
   issueSwitches: Record<Issue, HTMLInputElement>;
   theme: HTMLButtonElement;
@@ -88,18 +88,34 @@ export function setVerdict(els: Elements, tone: VerdictTone, title: string): voi
   els.verdictDot.className = `verdict__dot verdict__dot--${tone}`;
 }
 
-// ---------- sensitivity (segmented radios) ----------
+// ---------- segmented radios: sensitivity and sound ----------
+
+function readSegmented(fieldset: HTMLFieldSetElement): string | undefined {
+  return fieldset.querySelector<HTMLInputElement>('input:checked')?.value;
+}
+
+function writeSegmented(fieldset: HTMLFieldSetElement, value: string): void {
+  const input = fieldset.querySelector<HTMLInputElement>(`input[value="${value}"]`);
+  if (input) input.checked = true;
+}
 
 const SENSITIVITIES: readonly Sensitivity[] = ['low', 'normal', 'high'];
 
 export function readSensitivity(fieldset: HTMLFieldSetElement): Sensitivity | null {
-  const checked = fieldset.querySelector<HTMLInputElement>('input:checked');
-  return SENSITIVITIES.find((s) => s === checked?.value) ?? null;
+  const value = readSegmented(fieldset);
+  return SENSITIVITIES.find((s) => s === value) ?? null;
 }
 
 export function writeSensitivity(fieldset: HTMLFieldSetElement, value: Sensitivity): void {
-  const input = fieldset.querySelector<HTMLInputElement>(`input[value="${value}"]`);
-  if (input) input.checked = true;
+  writeSegmented(fieldset, value);
+}
+
+export function readSoundEnabled(fieldset: HTMLFieldSetElement): boolean {
+  return readSegmented(fieldset) !== 'off';
+}
+
+export function writeSoundEnabled(fieldset: HTMLFieldSetElement, enabled: boolean): void {
+  writeSegmented(fieldset, enabled ? 'on' : 'off');
 }
 
 // ---------- gauges: one per issue, built once, updated in place ----------

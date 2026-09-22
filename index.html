@@ -128,13 +128,13 @@
                 ></label
               >
             </fieldset>
+            <fieldset class="segmented" id="sound">
+              <legend class="label" data-i18n="sound">Sound alerts</legend>
+              <label><input type="radio" name="sound" value="on" /><span data-i18n="soundOn">On</span></label>
+              <label><input type="radio" name="sound" value="off" /><span data-i18n="soundOff">Off</span></label>
+            </fieldset>
           </div>
           <div class="toolbar__row toolbar__switches">
-            <label class="switch">
-              <input id="sound" type="checkbox" checked />
-              <span class="switch__track" aria-hidden="true"></span>
-              <span data-i18n="sound">Sound alerts</span>
-            </label>
             <!-- One switch per check; data-issue matches the Issue type and wires it up in main.ts. -->
             <label class="switch">
               <input type="checkbox" data-issue="tooClose" checked />
