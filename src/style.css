@@ -339,19 +339,8 @@ input:focus-visible + .switch__track {
 .gauge {
   display: grid;
   gap: 6px;
-  padding: 0;
-  border: 0;
-  background: none;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
 }
-.gauge:hover .gauge__name {
-  color: var(--accent);
-}
-.gauge--muted .gauge__name,
-.gauge--muted:hover .gauge__name {
+.gauge--muted .gauge__name {
   color: var(--muted);
   text-decoration: line-through;
 }

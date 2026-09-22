@@ -135,18 +135,54 @@
               <span class="switch__track" aria-hidden="true"></span>
               <span data-i18n="sound">Sound alerts</span>
             </label>
+            <!-- One switch per check; data-issue matches the Issue type and wires it up in main.ts. -->
             <label class="switch">
-              <input id="eye-care" type="checkbox" checked />
+              <input type="checkbox" data-issue="tooClose" checked />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span data-i18n="issueTooClose">Too close</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" data-issue="headDown" checked />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span data-i18n="issueHeadDown">Head down</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" data-issue="headTilt" checked />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span data-i18n="issueHeadTilt">Head tilt</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" data-issue="headForward" checked />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span data-i18n="issueHeadForward">Forward head</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" data-issue="slouch" checked />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span data-i18n="issueSlouch">Slouching</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" data-issue="shrug" checked />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span data-i18n="issueShrug">Raised shoulders</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" data-issue="sideLean" checked />
+              <span class="switch__track" aria-hidden="true"></span>
+              <span data-i18n="issueSideLean">Leaning sideways</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" data-issue="blink" checked />
               <span class="switch__track" aria-hidden="true"></span>
               <span data-i18n="eyeCare">Blink reminder</span>
             </label>
             <label class="switch">
-              <input id="sitting-reminder" type="checkbox" checked />
+              <input type="checkbox" data-issue="sitting" checked />
               <span class="switch__track" aria-hidden="true"></span>
               <span data-i18n="sittingReminder">Sitting reminder</span>
             </label>
             <label class="switch">
-              <input id="look-away-reminder" type="checkbox" checked />
+              <input type="checkbox" data-issue="lookAway" checked />
               <span class="switch__track" aria-hidden="true"></span>
               <span data-i18n="lookAwayReminder">Look-away reminder</span>
             </label>

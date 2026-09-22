@@ -25,6 +25,7 @@ import {
   buildMetricsTable,
   describeVerdict,
   getElements,
+  ISSUE_ORDER,
   issueLabel,
   readSensitivity,
   renderGauges,
@@ -63,7 +64,7 @@ function updateStartButton(): void {
 function applyLocale(): void {
   applyStaticStrings();
   els.language.value = getLocale();
-  buildGauges(els.issues, toggleMuted);
+  buildGauges(els.issues);
   renderGauges(els.issues, null, muted);
   buildMetricsTable(els.metrics);
   updateStartButton();
@@ -82,15 +83,8 @@ function setMuted(issue: Issue, isMuted: boolean): void {
   saveMutedIssues(muted);
   judge?.setMuted(muted);
   renderGauges(els.issues, null, muted);
-  if (issue === 'blink') els.eyeCare.checked = !isMuted;
-  if (issue === 'sitting') els.sittingReminder.checked = !isMuted;
-  if (issue === 'lookAway') els.lookAwayReminder.checked = !isMuted;
+  els.issueSwitches[issue].checked = !isMuted;
   appendLog(els.log, t(isMuted ? 'checkMutedLog' : 'checkUnmutedLog', { name: issueLabel(issue) }));
-}
-
-/** Clicking a gauge mutes or unmutes that check; the choice is remembered. */
-function toggleMuted(issue: Issue): void {
-  setMuted(issue, !muted.has(issue));
 }
 
 initTheme(els.theme);
@@ -98,9 +92,7 @@ applyLocale();
 writeSensitivity(els.sensitivity, sensitivity);
 els.sound.checked = loadSoundEnabled();
 alerter.soundEnabled = els.sound.checked;
-els.eyeCare.checked = !muted.has('blink');
-els.sittingReminder.checked = !muted.has('sitting');
-els.lookAwayReminder.checked = !muted.has('lookAway');
+for (const issue of ISSUE_ORDER) els.issueSwitches[issue].checked = !muted.has(issue);
 if (baseline) judge = createJudge(baseline);
 
 function createJudge(base: Baseline): PostureJudge {
@@ -303,17 +295,10 @@ els.sound.addEventListener('change', () => {
   saveSoundEnabled(els.sound.checked);
 });
 
-els.eyeCare.addEventListener('change', () => {
-  setMuted('blink', !els.eyeCare.checked);
-});
-
-els.sittingReminder.addEventListener('change', () => {
-  setMuted('sitting', !els.sittingReminder.checked);
-});
-
-els.lookAwayReminder.addEventListener('change', () => {
-  setMuted('lookAway', !els.lookAwayReminder.checked);
-});
+for (const issue of ISSUE_ORDER) {
+  const input = els.issueSwitches[issue];
+  input.addEventListener('change', () => setMuted(issue, !input.checked));
+}
 
 document.addEventListener('visibilitychange', () => {
   appendLog(els.log, document.hidden ? t('wentBackground') : t('cameForeground'));

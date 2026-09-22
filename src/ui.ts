@@ -17,19 +17,43 @@ export interface Elements {
   pip: HTMLButtonElement;
   sensitivity: HTMLFieldSetElement;
   sound: HTMLInputElement;
-  eyeCare: HTMLInputElement;
-  sittingReminder: HTMLInputElement;
-  lookAwayReminder: HTMLInputElement;
+  /** One toolbar switch per check, keyed by issue; unchecked = muted. */
+  issueSwitches: Record<Issue, HTMLInputElement>;
   theme: HTMLButtonElement;
   language: HTMLSelectElement;
   log: HTMLElement;
   alarmOverlay: HTMLElement;
 }
 
+/** Display order of the checks, shared by the gauges and the toolbar switches. */
+export const ISSUE_ORDER: readonly Issue[] = [
+  'tooClose',
+  'headDown',
+  'headTilt',
+  'headForward',
+  'slouch',
+  'shrug',
+  'sideLean',
+  'blink',
+  'sitting',
+  'lookAway',
+];
+
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
   if (!el) throw new Error(`Missing element #${id}`);
   return el as T;
+}
+
+/** Finds the `<input data-issue>` switch for every check; the HTML must declare all of them. */
+function issueSwitches(): Record<Issue, HTMLInputElement> {
+  const switches = {} as Record<Issue, HTMLInputElement>;
+  for (const issue of ISSUE_ORDER) {
+    const el = document.querySelector<HTMLInputElement>(`input[data-issue="${issue}"]`);
+    if (!el) throw new Error(`Missing switch for check "${issue}"`);
+    switches[issue] = el;
+  }
+  return switches;
 }
 
 export function getElements(): Elements {
@@ -49,9 +73,7 @@ export function getElements(): Elements {
     pip: byId('pip'),
     sensitivity: byId('sensitivity'),
     sound: byId('sound'),
-    eyeCare: byId('eye-care'),
-    sittingReminder: byId('sitting-reminder'),
-    lookAwayReminder: byId('look-away-reminder'),
+    issueSwitches: issueSwitches(),
     theme: byId('theme'),
     language: byId('language'),
     log: byId('log'),
@@ -81,19 +103,6 @@ export function writeSensitivity(fieldset: HTMLFieldSetElement, value: Sensitivi
 }
 
 // ---------- gauges: one per issue, built once, updated in place ----------
-
-const ISSUE_ORDER: Issue[] = [
-  'tooClose',
-  'headDown',
-  'headTilt',
-  'headForward',
-  'slouch',
-  'shrug',
-  'sideLean',
-  'blink',
-  'sitting',
-  'lookAway',
-];
 
 type Unit = '%' | '°' | '×' | 's' | 'min';
 
@@ -161,21 +170,18 @@ function formatGauge(state: IssueState | undefined, unit: Unit): string {
   return `${fmt(Math.max(0, state.value) * scale, digits)} / ${fmt(state.threshold * scale, digits)}${suffix}`;
 }
 
-/** Gauges are buttons: clicking one mutes or unmutes that check. */
-export function buildGauges(container: HTMLElement, onToggle: (issue: Issue) => void): void {
+/** Gauges only display; muting is done with the toolbar switches and shown here as a muted gauge. */
+export function buildGauges(container: HTMLElement): void {
   container.replaceChildren(
     ...ISSUE_ORDER.map((issue) => {
-      const root = document.createElement('button');
-      root.type = 'button';
+      const root = document.createElement('div');
       root.className = 'gauge gauge--unknown';
       root.dataset.issue = issue;
-      root.title = t('gaugeToggleHint');
       root.innerHTML =
         '<div class="gauge__head"><span class="gauge__name"></span><span class="gauge__value">—</span></div>' +
         '<div class="gauge__bar"><div class="gauge__fill"></div></div>';
       const name = root.querySelector<HTMLElement>('.gauge__name');
       if (name) name.textContent = t(ISSUE_LABEL_KEYS[issue]);
-      root.addEventListener('click', () => onToggle(issue));
       return root;
     }),
   );
@@ -198,7 +204,6 @@ export function renderGauges(container: HTMLElement, verdict: Verdict | null, mu
     const isMuted = muted.has(issue);
     value.textContent = isMuted ? t('gaugeMuted') : formatGauge(state, unit);
     root.classList.toggle('gauge--muted', isMuted);
-    root.setAttribute('aria-pressed', String(!isMuted));
 
     root.classList.remove('gauge--unknown', 'gauge--warn', 'gauge--active');
     if (!state || state.value === null) {
