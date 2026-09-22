@@ -17,19 +17,43 @@ export interface Elements {
   pip: HTMLButtonElement;
   sensitivity: HTMLFieldSetElement;
   sound: HTMLInputElement;
-  eyeCare: HTMLInputElement;
-  sittingReminder: HTMLInputElement;
-  lookAwayReminder: HTMLInputElement;
+  /** One toolbar switch per check, keyed by issue; unchecked = muted. */
+  issueSwitches: Record<Issue, HTMLInputElement>;
   theme: HTMLButtonElement;
   language: HTMLSelectElement;
   log: HTMLElement;
   alarmOverlay: HTMLElement;
 }
 
+/** Display order of the checks, shared by the gauges and the toolbar switches. */
+export const ISSUE_ORDER: readonly Issue[] = [
+  'tooClose',
+  'headDown',
+  'headTilt',
+  'headForward',
+  'slouch',
+  'shrug',
+  'sideLean',
+  'blink',
+  'sitting',
+  'lookAway',
+];
+
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
   if (!el) throw new Error(`Missing element #${id}`);
   return el as T;
+}
+
+/** Finds the `<input data-issue>` switch for every check; the HTML must declare all of them. */
+function issueSwitches(): Record<Issue, HTMLInputElement> {
+  const switches = {} as Record<Issue, HTMLInputElement>;
+  for (const issue of ISSUE_ORDER) {
+    const el = document.querySelector<HTMLInputElement>(`input[data-issue="${issue}"]`);
+    if (!el) throw new Error(`Missing switch for check "${issue}"`);
+    switches[issue] = el;
+  }
+  return switches;
 }
 
 export function getElements(): Elements {
@@ -49,9 +73,7 @@ export function getElements(): Elements {
     pip: byId('pip'),
     sensitivity: byId('sensitivity'),
     sound: byId('sound'),
-    eyeCare: byId('eye-care'),
-    sittingReminder: byId('sitting-reminder'),
-    lookAwayReminder: byId('look-away-reminder'),
+    issueSwitches: issueSwitches(),
     theme: byId('theme'),
     language: byId('language'),
     log: byId('log'),
@@ -81,19 +103,6 @@ export function writeSensitivity(fieldset: HTMLFieldSetElement, value: Sensitivi
 }
 
 // ---------- gauges: one per issue, built once, updated in place ----------
-
-const ISSUE_ORDER: Issue[] = [
-  'tooClose',
-  'headDown',
-  'headTilt',
-  'headForward',
-  'slouch',
-  'shrug',
-  'sideLean',
-  'blink',
-  'sitting',
-  'lookAway',
-];
 
 type Unit = '%' | '°' | '×' | 's' | 'min';
 
