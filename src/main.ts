@@ -181,8 +181,10 @@ function tick(): void {
   const raw = landmarkers.detect(els.video, now);
   const metrics = computeMetrics(raw, els.video.videoWidth, els.video.videoHeight);
   trackFps(now);
-  // Blinks last ~150 ms; at background frame rates they are missed, which would read as staring.
-  if (metrics && (document.hidden || currentFps < BLINK_MIN_FPS)) metrics.eyeClosed = null;
+  // Blinks last ~150 ms; at throttled frame rates they are missed, which would read as staring.
+  // Go by the measured rate, not document.hidden: a hidden tab with the floating window open
+  // still runs at full speed, and blink detection should keep working there.
+  if (metrics && currentFps < BLINK_MIN_FPS) metrics.eyeClosed = null;
 
   if (calibrator) {
     calibrator.add(metrics);
