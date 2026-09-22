@@ -28,10 +28,12 @@ import {
   ISSUE_ORDER,
   issueLabel,
   readSensitivity,
+  readSoundEnabled,
   renderGauges,
   renderMetrics,
   setVerdict,
   writeSensitivity,
+  writeSoundEnabled,
 } from './ui';
 
 const els = getElements();
@@ -90,8 +92,8 @@ function setMuted(issue: Issue, isMuted: boolean): void {
 initTheme(els.theme);
 applyLocale();
 writeSensitivity(els.sensitivity, sensitivity);
-els.sound.checked = loadSoundEnabled();
-alerter.soundEnabled = els.sound.checked;
+alerter.soundEnabled = loadSoundEnabled();
+writeSoundEnabled(els.sound, alerter.soundEnabled);
 for (const issue of ISSUE_ORDER) els.issueSwitches[issue].checked = !muted.has(issue);
 if (baseline) judge = createJudge(baseline);
 
@@ -291,8 +293,8 @@ els.language.addEventListener('change', () => {
 });
 
 els.sound.addEventListener('change', () => {
-  alerter.soundEnabled = els.sound.checked;
-  saveSoundEnabled(els.sound.checked);
+  alerter.soundEnabled = readSoundEnabled(els.sound);
+  saveSoundEnabled(alerter.soundEnabled);
 });
 
 for (const issue of ISSUE_ORDER) {
