@@ -46,7 +46,7 @@ camera → MediaPipe Face Landmarker + Pose Landmarker (WASM/WebGPU, on device)
 - Every check is **relative to a personal baseline**, so camera angle, offset, height and chair height cancel out during calibration.
 - A problem must persist for three seconds before the alarm fires, and clears after 1.5 seconds of good posture. Enter and exit thresholds differ to avoid flapping at the boundary.
 - The **Sensitivity** control scales all thresholds and dwell times: low ×1.4 / ×1.33, normal ×1, high ×0.6 / ×0.67. Sitting time is unaffected.
-- Click any check to turn it off; a muted check keeps measuring but never alarms. The choice is remembered. Every check also has a switch under the controls, next to the sound switch; the switch and the gauge stay in sync.
+- Every check has a switch under the controls, next to the sound switch. A check that is switched off keeps measuring but never alarms, and its gauge is shown muted. The choice is remembered.
 - Slouching is measured from the ears rather than the nose, so looking down no longer reads as slouching.
 - **Pause** releases the camera and stops all alerts; **Resume** reopens it without reloading the models.
 - Leaving the frame counts as good posture, so alarms clear when you walk away.

@@ -170,21 +170,18 @@ function formatGauge(state: IssueState | undefined, unit: Unit): string {
   return `${fmt(Math.max(0, state.value) * scale, digits)} / ${fmt(state.threshold * scale, digits)}${suffix}`;
 }
 
-/** Gauges are buttons: clicking one mutes or unmutes that check. */
-export function buildGauges(container: HTMLElement, onToggle: (issue: Issue) => void): void {
+/** Gauges only display; muting is done with the toolbar switches and shown here as a muted gauge. */
+export function buildGauges(container: HTMLElement): void {
   container.replaceChildren(
     ...ISSUE_ORDER.map((issue) => {
-      const root = document.createElement('button');
-      root.type = 'button';
+      const root = document.createElement('div');
       root.className = 'gauge gauge--unknown';
       root.dataset.issue = issue;
-      root.title = t('gaugeToggleHint');
       root.innerHTML =
         '<div class="gauge__head"><span class="gauge__name"></span><span class="gauge__value">—</span></div>' +
         '<div class="gauge__bar"><div class="gauge__fill"></div></div>';
       const name = root.querySelector<HTMLElement>('.gauge__name');
       if (name) name.textContent = t(ISSUE_LABEL_KEYS[issue]);
-      root.addEventListener('click', () => onToggle(issue));
       return root;
     }),
   );
@@ -207,7 +204,6 @@ export function renderGauges(container: HTMLElement, verdict: Verdict | null, mu
     const isMuted = muted.has(issue);
     value.textContent = isMuted ? t('gaugeMuted') : formatGauge(state, unit);
     root.classList.toggle('gauge--muted', isMuted);
-    root.setAttribute('aria-pressed', String(!isMuted));
 
     root.classList.remove('gauge--unknown', 'gauge--warn', 'gauge--active');
     if (!state || state.value === null) {

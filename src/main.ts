@@ -64,7 +64,7 @@ function updateStartButton(): void {
 function applyLocale(): void {
   applyStaticStrings();
   els.language.value = getLocale();
-  buildGauges(els.issues, toggleMuted);
+  buildGauges(els.issues);
   renderGauges(els.issues, null, muted);
   buildMetricsTable(els.metrics);
   updateStartButton();
@@ -85,11 +85,6 @@ function setMuted(issue: Issue, isMuted: boolean): void {
   renderGauges(els.issues, null, muted);
   els.issueSwitches[issue].checked = !isMuted;
   appendLog(els.log, t(isMuted ? 'checkMutedLog' : 'checkUnmutedLog', { name: issueLabel(issue) }));
-}
-
-/** Clicking a gauge mutes or unmutes that check; the choice is remembered. */
-function toggleMuted(issue: Issue): void {
-  setMuted(issue, !muted.has(issue));
 }
 
 initTheme(els.theme);
