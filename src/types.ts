@@ -105,4 +105,9 @@ export interface Verdict {
   alarm: boolean;
   /** 0..1, ramps up the longer the alarm has been active. */
   severity: number;
+  /**
+   * Milliseconds left in the look-away break, or null outside one. During the break every other
+   * check is paused (no readings, no alarms) and the break itself is shown as a countdown.
+   */
+  breakLeftMs: number | null;
 }

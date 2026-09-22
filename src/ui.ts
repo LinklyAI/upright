@@ -1,3 +1,4 @@
+import { LOOK_AWAY_BREAK_MS } from './config';
 import { getLocale, t, type Key } from './i18n';
 import type { Baseline, FrameMetrics, Issue, IssueState, Sensitivity, Verdict } from './types';
 
@@ -227,10 +228,27 @@ function gaugeRatio(state: IssueState | undefined): number | null {
   return Math.max(0, Math.min(1, state.value / state.threshold));
 }
 
+/** Whole seconds left in the break, rounded up so the countdown starts at 20 and ends at 0. */
+export function breakSecondsLeft(verdict: Verdict): number {
+  return Math.ceil((verdict.breakLeftMs ?? 0) / 1000);
+}
+
 export function renderGauges(container: HTMLElement, verdict: Verdict | null, muted: ReadonlySet<Issue>): void {
   for (const { root, value, ringValue } of gaugeRefs(container)) {
     const issue = root.dataset.issue as Issue | undefined;
     if (!issue) continue;
+    root.classList.remove('gauge--unknown', 'gauge--warn', 'gauge--active', 'gauge--break');
+
+    // During the break the look-away gauge counts down instead of showing screen time.
+    if (issue === 'lookAway' && verdict && verdict.breakLeftMs !== null) {
+      const seconds = breakSecondsLeft(verdict);
+      value.textContent = `${fmt(seconds, 0, 3)} s`;
+      ringValue.textContent = String(seconds);
+      root.style.setProperty('--ratio', (verdict.breakLeftMs / LOOK_AWAY_BREAK_MS).toFixed(3));
+      root.classList.add('gauge--break');
+      continue;
+    }
+
     const state = verdict?.issues[issue];
     const isMuted = muted.has(issue);
     const ratio = gaugeRatio(state);
@@ -239,7 +257,6 @@ export function renderGauges(container: HTMLElement, verdict: Verdict | null, mu
     root.style.setProperty('--ratio', (ratio ?? 0).toFixed(3));
     root.classList.toggle('gauge--muted', isMuted);
 
-    root.classList.remove('gauge--unknown', 'gauge--warn', 'gauge--active');
     if (ratio === null) root.classList.add('gauge--unknown');
     else if (!isMuted && state?.active) root.classList.add('gauge--active');
     else if (!isMuted && ratio >= 0.6) root.classList.add('gauge--warn');

@@ -21,6 +21,7 @@ import { initTheme } from './theme';
 import type { Baseline, Issue, Sensitivity, Verdict } from './types';
 import {
   appendLog,
+  breakSecondsLeft,
   buildGauges,
   buildMetricsTable,
   describeVerdict,
@@ -49,6 +50,7 @@ const muted: Set<Issue> = loadMutedIssues();
 let stream: MediaStream | null = null;
 let timer: number | null = null;
 let lastVerdictAlarm = false;
+let lastVerdictBreak = false;
 let lastTimestamp = 0;
 let frameCount = 0;
 let fpsWindowStart = performance.now();
@@ -159,6 +161,8 @@ function pause(): void {
   overlay.draw(null, null);
   alerter.reset();
   lastVerdictAlarm = false;
+  lastVerdictBreak = false;
+  els.stageAlert.classList.remove('stage__alert--break');
   renderGauges(els.issues, null, muted);
   setVerdict(els, 'idle', t('paused'));
   els.fps.textContent = t('fpsWaiting');
@@ -194,17 +198,24 @@ function tick(): void {
   renderMetrics(els.metrics, metrics, baseline, verdict);
 
   if (!verdict) return;
-  const message = describeVerdict(verdict);
+  const inBreak = verdict.breakLeftMs !== null;
+  const message = inBreak ? t('lookAwayBreak', { seconds: breakSecondsLeft(verdict) }) : describeVerdict(verdict);
   alerter.apply(verdict, message, now);
-  // Banner over the camera so the active check can be read at a glance.
-  els.stageAlert.hidden = !verdict.alarm;
-  if (verdict.alarm && els.stageAlert.textContent !== message) els.stageAlert.textContent = message;
+  // Banner over the camera so the active check (or the break countdown) can be read at a glance.
+  els.stageAlert.hidden = !verdict.alarm && !inBreak;
+  els.stageAlert.classList.toggle('stage__alert--break', inBreak);
+  if (!els.stageAlert.hidden && els.stageAlert.textContent !== message) els.stageAlert.textContent = message;
 
   if (verdict.alarm !== lastVerdictAlarm) {
     appendLog(els.log, verdict.alarm ? t('alarmLog', { message }) : t('recoveredLog'));
     lastVerdictAlarm = verdict.alarm;
   }
-  if (!metrics) setVerdict(els, 'idle', t('noFace'));
+  if (inBreak !== lastVerdictBreak) {
+    appendLog(els.log, inBreak ? t('lookAwayBreakStartedLog') : t('lookAwayBreakEndedLog'));
+    lastVerdictBreak = inBreak;
+  }
+  if (inBreak) setVerdict(els, 'ok', message);
+  else if (!metrics) setVerdict(els, 'idle', t('noFace'));
   else if (verdict.alarm) setVerdict(els, 'bad', t('adjust', { message }));
   else setVerdict(els, 'ok', t('postureGood'));
 }
@@ -221,6 +232,7 @@ function finishCalibration(current: Calibrator): void {
   saveBaseline(result);
   judge = createJudge(result);
   lastVerdictAlarm = false;
+  lastVerdictBreak = false;
   setVerdict(els, 'ok', t('calibrationDone'));
   const shoulders = result.shoulders
     ? t('calibrationShoulders', {

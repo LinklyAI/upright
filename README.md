@@ -41,12 +41,13 @@ camera → MediaPipe Face Landmarker + Pose Landmarker (WASM/WebGPU, on device)
 | Leaning sideways | the larger of shoulder-line tilt (14°) and lateral nose offset (30% of shoulder width); must persist for 8 s                | threshold / half        |
 | Blink reminder   | seconds since the last blink, from the eye-closure blendshapes; suspended in background tabs where blinks cannot be seen    | 12 s / 6 s              |
 | Sitting too long | continuous time in frame; leaving for two minutes counts as standing up                                                     | 45 min                  |
-| Look-away        | 20-20-20 rule: screen time since the last break; resets after 20 s out of frame or 20 s of the reminder showing             | 20 min                  |
+| Look-away        | 20-20-20 rule: screen time since the last break; resets after 20 s out of frame or 20 s of the break                        | 20 min                  |
 
 - Every check is **relative to a personal baseline**, so camera angle, offset, height and chair height cancel out during calibration.
 - A problem must persist for three seconds before the alarm fires, and clears after 1.5 seconds of good posture. Enter and exit thresholds differ to avoid flapping at the boundary.
 - The **Sensitivity** control scales all thresholds and dwell times: low ×1.4 / ×1.33, normal ×1, high ×0.6 / ×0.67. Sitting time is unaffected.
 - Every check has a switch under the controls. A check that is switched off keeps measuring but never alarms, and its gauge is shown muted. The choice is remembered.
+- When the look-away reminder fires, the check turns into a 20-second countdown shown in green (gauge, status line and camera banner), and every other check pauses until the break is over.
 - Slouching is measured from the ears rather than the nose, so looking down no longer reads as slouching.
 - **Pause** releases the camera and stops all alerts; **Resume** reopens it without reloading the models.
 - Leaving the frame counts as good posture, so alarms clear when you walk away.
