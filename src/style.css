@@ -221,6 +221,9 @@ input:focus-visible + .switch__track {
 .stage__alert[hidden] {
   display: none;
 }
+.stage__alert--break {
+  background: var(--ok);
+}
 .stage-note {
   margin: 0 0 12px;
   font-size: 14px;
@@ -388,6 +391,21 @@ input:focus-visible + .switch__track {
 }
 .gauge--active .gauge__fill {
   background: var(--bad);
+}
+/* Look-away break: the gauge counts down in green while every other check is paused */
+.gauge--break .gauge__name,
+.gauge--break .gauge__value,
+.gauge--break .gauge__ring-value {
+  color: var(--ok);
+}
+.gauge--break .gauge__name {
+  font-weight: 650;
+}
+.gauge--break .gauge__fill {
+  background: var(--ok);
+}
+.gauge--break .gauge__ring-fill {
+  stroke: var(--ok);
 }
 .gauge--unknown .gauge__name {
   color: var(--muted);

@@ -95,35 +95,44 @@ class IssueTracker {
 }
 
 /**
- * 20-20-20 timer: minutes of continuous screen time. Resets after the user has been out of
- * frame for the break length, or once the reminder has been showing for that long (the user
- * looked away but stayed in frame).
+ * 20-20-20 timer: minutes of continuous screen time. Once the interval is up a break starts and
+ * runs for the break length whether the user looks away in frame or leaves it; being out of
+ * frame for the break length also resets the screen time on its own.
  */
 class LookAwayTimer {
   private screenSince: number | null = null;
   private awaySince: number | null = null;
-  private remindSince: number | null = null;
+  private breakSince: number | null = null;
 
   update(present: boolean, now: number): number | null {
     if (!present) {
       this.awaySince ??= now;
-      if (now - this.awaySince >= LOOK_AWAY_BREAK_MS) this.screenSince = null;
+      if (now - this.awaySince >= LOOK_AWAY_BREAK_MS) {
+        this.screenSince = null;
+        this.breakSince = null;
+      }
       return null;
     }
     this.awaySince = null;
     this.screenSince ??= now;
     const minutes = (now - this.screenSince) / 60000;
     if (minutes >= LOOK_AWAY_INTERVAL_MIN) {
-      this.remindSince ??= now;
-      if (now - this.remindSince >= LOOK_AWAY_BREAK_MS) {
+      this.breakSince ??= now;
+      if (now - this.breakSince >= LOOK_AWAY_BREAK_MS) {
         this.screenSince = now;
-        this.remindSince = null;
+        this.breakSince = null;
         return 0;
       }
     } else {
-      this.remindSince = null;
+      this.breakSince = null;
     }
     return minutes;
+  }
+
+  /** Milliseconds left in the current break, or null outside one. Call after update(). */
+  breakLeftMs(now: number): number | null {
+    if (this.breakSince === null) return null;
+    return Math.max(0, LOOK_AWAY_BREAK_MS - (now - this.breakSince));
   }
 }
 
@@ -202,10 +211,18 @@ export class PostureJudge {
 
   update(metrics: FrameMetrics | null, now: number): Verdict {
     const deviations = this.deviations(metrics, now);
+    // A muted reminder never starts a break.
+    const breakLeftMs = this.muted.has('lookAway') ? null : this.lookAway.breakLeftMs(now);
+    // While the user is meant to be looking away, every other check pauses: no readings (so
+    // a turned head does not build up dwell time) and no alarms.
+    if (breakLeftMs !== null) {
+      for (const issue of ISSUES) if (issue !== 'lookAway') deviations[issue] = null;
+    }
     const issues = Object.fromEntries(
       ISSUES.map((issue) => {
         const state = this.trackers[issue].update(deviations[issue], now);
-        return [issue, this.muted.has(issue) ? { ...state, active: false, activeSince: null } : state];
+        const silenced = this.muted.has(issue) || (breakLeftMs !== null && issue !== 'lookAway');
+        return [issue, silenced ? { ...state, active: false, activeSince: null } : state];
       }),
     ) as Record<Issue, IssueState>;
 
@@ -213,6 +230,8 @@ export class PostureJudge {
     for (const issue of ISSUES) {
       const state = issues[issue];
       if (!state.active || state.activeSince === null) continue;
+      // The break is shown as a countdown, not raised as an alarm.
+      if (issue === 'lookAway' && breakLeftMs !== null) continue;
       // Reminders are nudges, not posture faults: they never drive the page deep red.
       if (issue === 'blink' || issue === 'lookAway') {
         severity = Math.max(severity, NUDGE_SEVERITY);
@@ -222,7 +241,7 @@ export class PostureJudge {
       severity = Math.max(severity, 0.35 + 0.65 * ramp);
     }
 
-    return { issues, alarm: severity > 0, severity };
+    return { issues, alarm: severity > 0, severity, breakLeftMs };
   }
 
   /** Signed deviations from baseline; positive means "worse". See config.ts for units. */

@@ -11,6 +11,7 @@ export class Alerter {
   private lastBeepAt = 0;
   private lastNotifyAt = 0;
   private wasAlarm = false;
+  private wasBreak = false;
   soundEnabled = true;
 
   constructor(private readonly overlay: HTMLElement) {}
@@ -35,12 +36,15 @@ export class Alerter {
     this.overlay.style.opacity = '0';
     document.title = t('title');
     this.wasAlarm = false;
+    this.wasBreak = false;
   }
 
+  /** `message` names the active checks, or the countdown while a look-away break is running. */
   apply(verdict: Verdict, message: string, now: number): void {
     const { alarm, severity } = verdict;
+    const inBreak = verdict.breakLeftMs !== null;
     this.overlay.style.opacity = alarm ? String(0.15 + 0.55 * severity) : '0';
-    document.title = alarm ? `⚠ ${message} – ${t('title')}` : t('title');
+    document.title = alarm ? `⚠ ${message} – ${t('title')}` : inBreak ? `${message} – ${t('title')}` : t('title');
 
     if (alarm) {
       if (this.soundEnabled && now - this.lastBeepAt >= BEEP_INTERVAL_MS) {
@@ -53,7 +57,19 @@ export class Alerter {
         this.lastNotifyAt = now;
       }
     }
+    // A break gets one beep and one notification to catch the eye; the countdown does the rest.
+    if (inBreak && !this.wasBreak) {
+      if (this.soundEnabled) {
+        this.beep();
+        this.lastBeepAt = now;
+      }
+      if (document.hidden) {
+        this.notify(message);
+        this.lastNotifyAt = now;
+      }
+    }
     this.wasAlarm = alarm;
+    this.wasBreak = inBreak;
   }
 
   private beep(): void {

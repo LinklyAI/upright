@@ -92,7 +92,8 @@ export const RULES: Record<Issue, IssueRule> = {
     enterMs: 0,
     exitMs: SITTING_ABSENCE_RESET_MS,
   },
-  lookAway: { enter: LOOK_AWAY_INTERVAL_MIN, exit: LOOK_AWAY_INTERVAL_MIN, enterMs: 0, exitMs: 300 },
+  // Clears the instant the break is over so the countdown never flashes back into an alarm.
+  lookAway: { enter: LOOK_AWAY_INTERVAL_MIN, exit: LOOK_AWAY_INTERVAL_MIN, enterMs: 0, exitMs: 0 },
 };
 
 /** Issues whose thresholds are not affected by the sensitivity setting. */
