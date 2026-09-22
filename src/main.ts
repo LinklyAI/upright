@@ -38,7 +38,7 @@ import {
 } from './ui';
 
 const els = getElements();
-const alerter = new Alerter(els.alarmOverlay);
+const alerter = new Alerter([els.alarmOverlay, els.pipWash]);
 const overlay = new Overlay(els.canvas);
 
 let landmarkers: Landmarkers | null = null;
