@@ -151,7 +151,7 @@ const ISSUE_UNITS: Record<Issue, Unit> = {
 interface GaugeRefs {
   root: HTMLElement;
   value: HTMLElement;
-  fill: HTMLElement;
+  ringValue: HTMLElement;
 }
 
 /** Fixed-width number formatting so values change without the layout shifting. */
@@ -186,7 +186,11 @@ function formatGauge(state: IssueState | undefined, unit: Unit): string {
   return `${fmt(Math.max(0, state.value) * scale, digits)} / ${fmt(state.threshold * scale, digits)}${suffix}`;
 }
 
-/** Gauges only display; muting is done with the toolbar switches and shown here as a muted gauge. */
+/**
+ * Gauges only display; muting is done with the toolbar switches and shown here as a muted gauge.
+ * Each gauge carries both a bar (main page) and a ring (PiP window); CSS shows one of them and
+ * both read the fill level from the `--ratio` custom property set in renderGauges.
+ */
 export function buildGauges(container: HTMLElement): void {
   container.replaceChildren(
     ...ISSUE_ORDER.map((issue) => {
@@ -195,7 +199,13 @@ export function buildGauges(container: HTMLElement): void {
       root.dataset.issue = issue;
       root.innerHTML =
         '<div class="gauge__head"><span class="gauge__name"></span><span class="gauge__value">—</span></div>' +
-        '<div class="gauge__bar"><div class="gauge__fill"></div></div>';
+        '<div class="gauge__bar"><div class="gauge__fill"></div></div>' +
+        '<div class="gauge__ring">' +
+        '<svg viewBox="0 0 44 44" aria-hidden="true" focusable="false">' +
+        '<circle class="gauge__ring-track" cx="22" cy="22" r="19" />' +
+        '<circle class="gauge__ring-fill" cx="22" cy="22" r="19" pathLength="100" />' +
+        '</svg>' +
+        '<span class="gauge__ring-value">—</span></div>';
       const name = root.querySelector<HTMLElement>('.gauge__name');
       if (name) name.textContent = t(ISSUE_LABEL_KEYS[issue]);
       return root;
@@ -206,32 +216,33 @@ export function buildGauges(container: HTMLElement): void {
 function gaugeRefs(container: HTMLElement): GaugeRefs[] {
   return Array.from(container.querySelectorAll<HTMLElement>('.gauge')).flatMap((root) => {
     const value = root.querySelector<HTMLElement>('.gauge__value');
-    const fill = root.querySelector<HTMLElement>('.gauge__fill');
-    return value && fill ? [{ root, value, fill }] : [];
+    const ringValue = root.querySelector<HTMLElement>('.gauge__ring-value');
+    return value && ringValue ? [{ root, value, ringValue }] : [];
   });
 }
 
+/** How close the check is to firing, 0–1, or null while there is no reading. */
+function gaugeRatio(state: IssueState | undefined): number | null {
+  if (!state || state.value === null) return null;
+  return Math.max(0, Math.min(1, state.value / state.threshold));
+}
+
 export function renderGauges(container: HTMLElement, verdict: Verdict | null, muted: ReadonlySet<Issue>): void {
-  for (const { root, value, fill } of gaugeRefs(container)) {
+  for (const { root, value, ringValue } of gaugeRefs(container)) {
     const issue = root.dataset.issue as Issue | undefined;
     if (!issue) continue;
     const state = verdict?.issues[issue];
-    const unit = ISSUE_UNITS[issue];
     const isMuted = muted.has(issue);
-    value.textContent = isMuted ? t('gaugeMuted') : formatGauge(state, unit);
+    const ratio = gaugeRatio(state);
+    value.textContent = isMuted ? t('gaugeMuted') : formatGauge(state, ISSUE_UNITS[issue]);
+    ringValue.textContent = isMuted ? t('gaugeMuted') : ratio === null ? '—' : String(Math.round(ratio * 100));
+    root.style.setProperty('--ratio', (ratio ?? 0).toFixed(3));
     root.classList.toggle('gauge--muted', isMuted);
 
     root.classList.remove('gauge--unknown', 'gauge--warn', 'gauge--active');
-    if (!state || state.value === null) {
-      root.classList.add('gauge--unknown');
-      fill.style.width = '0%';
-      continue;
-    }
-    const ratio = Math.max(0, Math.min(1, state.value / state.threshold));
-    fill.style.width = `${(ratio * 100).toFixed(1)}%`;
-    if (isMuted) continue;
-    if (state.active) root.classList.add('gauge--active');
-    else if (ratio >= 0.6) root.classList.add('gauge--warn');
+    if (ratio === null) root.classList.add('gauge--unknown');
+    else if (!isMuted && state?.active) root.classList.add('gauge--active');
+    else if (!isMuted && ratio >= 0.6) root.classList.add('gauge--warn');
   }
 }
 
