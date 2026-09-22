@@ -730,6 +730,13 @@ input:focus-visible + .switch__track {
   transition: opacity 0.6s ease;
   z-index: 10;
 }
+/* The panel's own wash only shows in the floating window; on the page it would double the page wash. */
+.alarm-overlay--pip {
+  display: none;
+}
+.pip .alarm-overlay--pip {
+  display: block;
+}
 
 @media (max-width: 760px) {
   .app {

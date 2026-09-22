@@ -24,6 +24,8 @@ export interface Elements {
   language: HTMLSelectElement;
   log: HTMLElement;
   alarmOverlay: HTMLElement;
+  /** Second alarm wash inside the panel, shown only while the panel is in the floating window. */
+  pipWash: HTMLElement;
 }
 
 /** Display order of the checks, shared by the gauges and the toolbar switches. */
@@ -79,6 +81,7 @@ export function getElements(): Elements {
     language: byId('language'),
     log: byId('log'),
     alarmOverlay: byId('alarm-overlay'),
+    pipWash: byId('pip-wash'),
   };
 }
 

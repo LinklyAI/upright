@@ -3,8 +3,8 @@ import { t } from './i18n';
 import type { Verdict } from './types';
 
 /**
- * Turns a verdict into user-facing feedback: red page wash, beeps, tab title and
- * (when the tab is hidden) a system notification.
+ * Turns a verdict into user-facing feedback: red wash over the page and the floating window,
+ * beeps, tab title and (when the tab is hidden) a system notification.
  */
 export class Alerter {
   private audio: AudioContext | null = null;
@@ -14,7 +14,8 @@ export class Alerter {
   private wasBreak = false;
   soundEnabled = true;
 
-  constructor(private readonly overlay: HTMLElement) {}
+  /** Every wash surface gets the same opacity; one lives on the page, one travels with the panel. */
+  constructor(private readonly overlays: readonly HTMLElement[]) {}
 
   /** Must be called from a user gesture so the AudioContext is allowed to play. */
   enableAudio(): void {
@@ -33,7 +34,7 @@ export class Alerter {
 
   /** Clears any visible alarm, e.g. when monitoring is paused. */
   reset(): void {
-    this.overlay.style.opacity = '0';
+    this.setWash(0);
     document.title = t('title');
     this.wasAlarm = false;
     this.wasBreak = false;
@@ -43,7 +44,7 @@ export class Alerter {
   apply(verdict: Verdict, message: string, now: number): void {
     const { alarm, severity } = verdict;
     const inBreak = verdict.breakLeftMs !== null;
-    this.overlay.style.opacity = alarm ? String(0.15 + 0.55 * severity) : '0';
+    this.setWash(alarm ? 0.15 + 0.55 * severity : 0);
     document.title = alarm ? `⚠ ${message} – ${t('title')}` : inBreak ? `${message} – ${t('title')}` : t('title');
 
     if (alarm) {
@@ -70,6 +71,10 @@ export class Alerter {
     }
     this.wasAlarm = alarm;
     this.wasBreak = inBreak;
+  }
+
+  private setWash(opacity: number): void {
+    for (const overlay of this.overlays) overlay.style.opacity = String(opacity);
   }
 
   private beep(): void {
