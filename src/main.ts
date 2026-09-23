@@ -2,7 +2,7 @@ import './style.css';
 import { Alerter } from './alerts';
 import { Calibrator, loadBaseline, saveBaseline } from './calibration';
 import { openCamera, requestWakeLock } from './camera';
-import { BLINK_MIN_FPS, CALIBRATION_MS, RULES, TICK_MS } from './config';
+import { BLINK_MIN_FPS, CALIBRATION_MS, RULES, SITTING_ABSENCE_RESET_MS, TICK_MS } from './config';
 import { applyStaticStrings, getLocale, setLocale, t } from './i18n';
 import { PostureJudge } from './judge';
 import { Landmarkers } from './landmarkers';
@@ -217,8 +217,9 @@ function tick(): void {
     lastVerdictBreak = inBreak;
   }
   if (inBreak) setVerdict(els, 'ok', message);
-  else if (verdict.issues.sitting.active) setVerdict(els, 'bad', t('sittingMessage'));
-  else if (!metrics) setVerdict(els, 'idle', t('noFace'));
+  else if (!metrics && verdict.issues.sitting.active) {
+    setVerdict(els, 'bad', t('sittingMessage', { minutes: SITTING_ABSENCE_RESET_MS / 60000 }));
+  } else if (!metrics) setVerdict(els, 'idle', t('noFace'));
   else if (verdict.alarm) setVerdict(els, 'bad', t('adjust', { message }));
   else setVerdict(els, 'ok', t('postureGood'));
 }
