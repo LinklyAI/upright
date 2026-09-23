@@ -14,6 +14,7 @@ const en = {
   metaDescription:
     'Free posture reminder that runs entirely in your browser. Your webcam checks for slouching, leaning in, head tilt and long sitting, and nudges you to sit up straight. No data ever leaves your device.',
   themeToggle: 'Toggle color theme',
+  github: 'View source on GitHub',
   language: 'Language',
   stageAria: 'Camera view',
   stageHint: 'Click "Start camera" to begin',
@@ -135,6 +136,7 @@ const zh: Record<Key, string> = {
   metaDescription:
     '运行在本地浏览器里的免费坐姿提醒。摄像头检测驼背、离屏太近、歪头、久坐等问题并及时提醒，无任何数据上传。',
   themeToggle: '切换明暗主题',
+  github: '在 GitHub 上查看源码',
   language: '语言',
   stageAria: '摄像头画面',
   stageHint: '点「启动摄像头」开始',
