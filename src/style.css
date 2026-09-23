@@ -62,6 +62,7 @@ button {
   cursor: pointer;
 }
 button:focus-visible,
+a:focus-visible,
 input:focus-visible + span,
 input:focus-visible + .switch__track {
   outline: 2px solid var(--accent);
@@ -146,21 +147,26 @@ input:focus-visible + .switch__track {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
-#theme {
+/* Square icon buttons at the right of the masthead: theme toggle and the GitHub link. */
+#theme,
+#github {
   background: none;
   border: 1px solid var(--line);
   border-radius: 0;
   width: 32px;
   height: 32px;
   padding: 0;
+  color: inherit;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-#theme svg {
+#theme svg,
+#github svg {
   display: block;
 }
-#theme:hover {
+#theme:hover,
+#github:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
