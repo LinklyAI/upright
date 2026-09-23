@@ -1,4 +1,4 @@
-import { LOOK_AWAY_BREAK_MS } from './config';
+import { LOOK_AWAY_BREAK_MS, SITTING_ABSENCE_RESET_MS } from './config';
 import { getLocale, t, type Key } from './i18n';
 import type { Baseline, FrameMetrics, Issue, IssueState, Sensitivity, Verdict } from './types';
 
@@ -273,7 +273,7 @@ export function issueLabel(issue: Issue): string {
 export function describeVerdict(verdict: Verdict): string {
   const active = ISSUE_ORDER.filter((issue) => verdict.issues[issue].active).map((issue) =>
     issue === 'sitting'
-      ? t('sittingMessage')
+      ? t('sittingMessage', { minutes: SITTING_ABSENCE_RESET_MS / 60000 })
       : issue === 'blink'
         ? t('blinkMessage')
         : issue === 'lookAway'
