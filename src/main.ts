@@ -217,6 +217,7 @@ function tick(): void {
     lastVerdictBreak = inBreak;
   }
   if (inBreak) setVerdict(els, 'ok', message);
+  else if (verdict.issues.sitting.active) setVerdict(els, 'bad', t('sittingMessage'));
   else if (!metrics) setVerdict(els, 'idle', t('noFace'));
   else if (verdict.alarm) setVerdict(els, 'bad', t('adjust', { message }));
   else setVerdict(els, 'ok', t('postureGood'));
